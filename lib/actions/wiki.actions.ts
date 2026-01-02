@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import { wikiConfig } from '@/lib/config/wiki.config';
 import { getFilePath, filenameToSlug, isValidSlug, slugToFilename } from '@/lib/utils/file.utils';
 import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
+import { filterWikiItems } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
 
 /**
@@ -184,5 +185,18 @@ export async function deleteWikiPage(slug: string): Promise<void> {
   } catch (error) {
     console.error('Error deleting wiki page:', error);
     throw new Error('Failed to delete wiki page');
+  }
+}
+
+/**
+ * Wiki 페이지 검색
+ */
+export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
+  try {
+    const allItems = await getWikiList();
+    return filterWikiItems(allItems, query);
+  } catch (error) {
+    console.error('Error searching wiki pages:', error);
+    throw new Error('Failed to search wiki pages');
   }
 }
