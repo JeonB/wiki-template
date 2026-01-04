@@ -8,11 +8,18 @@ export interface WikiFrontmatter {
   author?: string;
 }
 
+export interface TocItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
 export interface WikiPage {
   slug: string;
   frontmatter: WikiFrontmatter;
   content: string;
   html?: string;
+  toc?: TocItem[];
 }
 
 export interface WikiListItem {

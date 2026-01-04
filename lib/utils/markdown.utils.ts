@@ -2,6 +2,7 @@ import matter from 'gray-matter';
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
+import { extractHeadings, addIdsToHeadings } from './toc.utils';
 import type { WikiFrontmatter, WikiPage } from '@/lib/types/wiki.types';
 
 /**
@@ -22,13 +23,20 @@ export async function parseMarkdownFile(content: string, slug: string): Promise<
 
   // 마크다운을 HTML로 변환
   const processedContent = await remark().use(remarkGfm).use(remarkHtml).process(body);
-  const html = processedContent.toString();
+  let html = processedContent.toString();
+
+  // 목차 추출
+  const toc = extractHeadings(body);
+
+  // HTML에 제목 ID 추가
+  html = addIdsToHeadings(html, toc);
 
   return {
     slug,
     frontmatter,
     content: body.trim(),
     html,
+    toc,
   };
 }
 

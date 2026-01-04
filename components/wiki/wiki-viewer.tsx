@@ -29,7 +29,7 @@ export default function WikiViewer({ page }: WikiViewerProps) {
         </div>
       </header>
       <div
-        className="wiki-content"
+        className="wiki-content prose-headings:scroll-mt-20"
         dangerouslySetInnerHTML={{ __html: page.html || '' }}
       />
     </article>
