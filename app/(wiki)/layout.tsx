@@ -5,22 +5,36 @@ import { getWikiList } from '@/lib/actions/wiki.actions';
 export default async function WikiLayout({ children }: { children: React.ReactNode }) {
   const items = await getWikiList();
 
+  // #region agent log
+  if (typeof window !== 'undefined') {
+    fetch('http://127.0.0.1:7242/ingest/be01d120-613a-4490-bf01-bf570c50ea02', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'app/(wiki)/layout.tsx:5',
+        message: 'WikiLayout rendering',
+        data: { itemsCount: items.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return (
     <div className="min-h-screen bg-background">
-      <WikiNav />
+      <WikiNav items={items} />
       <div className="flex">
         {/* 좌측 사이드바 - 데스크톱에서만 표시, 모바일에서는 숨김 */}
         <div className="hidden lg:block lg:w-64 lg:shrink-0">
           <WikiSidebar items={items} />
         </div>
-        {/* 중앙 컨텐츠 영역 */}
+        {/* 중앙 컨텐츠 영역 - flex 컨테이너로 변경하여 목차와 함께 배치 */}
         <main className="flex-1 min-w-0">
-          <div className="mx-auto max-w-4xl px-4 py-8 lg:px-8">
-            {children}
-          </div>
+          {children}
         </main>
-        {/* 우측 목차 영역 - 문서 페이지에서만 표시 */}
-        <div className="hidden xl:block xl:w-64 xl:shrink-0" />
       </div>
     </div>
   );
