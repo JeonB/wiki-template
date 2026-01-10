@@ -1,20 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, FileText } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Search, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { searchWikiPages } from '@/lib/actions/wiki.actions';
-import { highlightText } from '@/lib/utils/search.utils';
-import type { WikiListItem } from '@/lib/types/wiki.types';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { searchWikiPages } from "@/lib/actions/wiki.actions";
+import { highlightText } from "@/lib/utils/search.utils";
+import type { WikiListItem } from "@/lib/types/wiki.types";
 
 interface WikiSearchProps {
   open: boolean;
@@ -22,7 +21,7 @@ interface WikiSearchProps {
 }
 
 export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<WikiListItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -41,7 +40,7 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
       setResults(searchResults);
       setSelectedIndex(0);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error("Search error:", error);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -64,28 +63,30 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
       // 입력 필드에 포커스가 있을 때는 무시
       if (
         (e.metaKey || e.ctrlKey) &&
-        e.key === 'k' &&
-        document.activeElement?.tagName !== 'INPUT' &&
-        document.activeElement?.tagName !== 'TEXTAREA'
+        e.key === "k" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
       ) {
         e.preventDefault();
         onOpenChange(!open);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onOpenChange]);
 
   // 모달이 열릴 때 포커스 설정
   useEffect(() => {
     if (open) {
-      setQuery('');
+      setQuery("");
       setResults([]);
       setSelectedIndex(0);
       // 입력창에 포커스 (약간의 지연 후)
       setTimeout(() => {
-        const input = document.querySelector('[data-search-input]') as HTMLInputElement;
+        const input = document.querySelector(
+          "[data-search-input]"
+        ) as HTMLInputElement;
         input?.focus();
       }, 100);
     }
@@ -93,16 +94,16 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
 
   // 키보드 네비게이션
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === 'Enter' && results[selectedIndex]) {
+    } else if (e.key === "Enter" && results[selectedIndex]) {
       e.preventDefault();
       handleSelectResult(results[selectedIndex]);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       onOpenChange(false);
     }
@@ -111,7 +112,7 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
   const handleSelectResult = (item: WikiListItem) => {
     router.push(`/${item.slug}`);
     onOpenChange(false);
-    setQuery('');
+    setQuery("");
     setResults([]);
   };
 
@@ -120,7 +121,9 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>문서 검색</DialogTitle>
-          <DialogDescription>제목, 설명, 태그, 카테고리에서 검색합니다</DialogDescription>
+          <DialogDescription>
+            제목, 설명, 태그, 카테고리에서 검색합니다
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="relative">
@@ -136,7 +139,9 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
             />
           </div>
           {isSearching && (
-            <div className="py-8 text-center text-sm text-muted-foreground">검색 중...</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              검색 중...
+            </div>
           )}
           {!isSearching && query && results.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
@@ -159,8 +164,8 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
                     onClick={() => handleSelectResult(item)}
                     className={`w-full rounded-md border p-3 text-left transition-colors ${
                       index === selectedIndex
-                        ? 'border-primary bg-accent'
-                        : 'border-transparent hover:bg-accent'
+                        ? "border-primary bg-accent"
+                        : "border-transparent hover:bg-accent"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -169,12 +174,15 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
                         <h3 className="font-semibold">
                           {titleParts.map((part, i) =>
                             part.highlight ? (
-                              <mark key={i} className="bg-yellow-200 dark:bg-yellow-800">
+                              <mark
+                                key={i}
+                                className="bg-yellow-200 dark:bg-yellow-800"
+                              >
                                 {part.text}
                               </mark>
                             ) : (
                               <span key={i}>{part.text}</span>
-                            ),
+                            )
                           )}
                         </h3>
                         {item.description && (
@@ -191,7 +199,10 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
                           {item.tags && item.tags.length > 0 && (
                             <>
                               {item.tags.slice(0, 2).map((tag) => (
-                                <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                                <span
+                                  key={tag}
+                                  className="rounded-full bg-muted px-2 py-0.5 text-xs"
+                                >
                                   #{tag}
                                 </span>
                               ))}

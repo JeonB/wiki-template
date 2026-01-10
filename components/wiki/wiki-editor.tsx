@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 interface WikiEditorProps {
   title: string;
@@ -11,7 +10,12 @@ interface WikiEditorProps {
   onContentChange: (content: string) => void;
 }
 
-export default function WikiEditor({ title, content, onTitleChange, onContentChange }: WikiEditorProps) {
+export default function WikiEditor({
+  title,
+  content,
+  onTitleChange,
+  onContentChange,
+}: WikiEditorProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -27,7 +31,10 @@ export default function WikiEditor({ title, content, onTitleChange, onContentCha
         />
       </div>
       <div>
-        <label htmlFor="wiki-content" className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="wiki-content"
+          className="mb-2 block text-sm font-medium"
+        >
           내용 (Markdown)
         </label>
         <Textarea
