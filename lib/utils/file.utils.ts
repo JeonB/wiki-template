@@ -37,3 +37,15 @@ export function isValidFilename(filename: string): boolean {
 export function isValidSlug(slug: string): boolean {
   return /^[a-z0-9-]+$/.test(slug) && slug.length > 0;
 }
+
+/**
+ * 사용자 입력을 슬러그 형식으로 정규화
+ * 영문 소문자, 숫자, 하이픈만 허용하고 연속된 하이픈을 하나로 통합
+ */
+export function normalizeSlug(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}

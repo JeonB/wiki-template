@@ -32,52 +32,6 @@ export default async function WikiPage({ params }: WikiPageProps) {
     { label: page.frontmatter.title },
   ];
 
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/be01d120-613a-4490-bf01-bf570c50ea02', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'app/(wiki)/[slug]/page.tsx:35',
-        message: 'WikiPage rendering',
-        data: { slug, hasToc: !!page.toc, tocLength: page.toc?.length || 0 },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    setTimeout(() => {
-      const mainElement = document.querySelector('main');
-      const asideInMain = mainElement?.querySelector('aside');
-      const asideInLayout = document.querySelector('div.flex > aside');
-      fetch('http://127.0.0.1:7242/ingest/be01d120-613a-4490-bf01-bf570c50ea02', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'app/(wiki)/[slug]/page.tsx:36',
-          message: 'DOM structure check',
-          data: {
-            hasMain: !!mainElement,
-            asideInMain: !!asideInMain,
-            asideInLayout: !!asideInLayout,
-            mainChildrenCount: mainElement?.children.length || 0,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-    }, 100);
-  }
-  // #endregion
-
   return (
     <>
       <ReadingProgress />

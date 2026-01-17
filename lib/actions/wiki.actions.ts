@@ -39,7 +39,9 @@ export async function getWikiList(): Promise<WikiListItem[]> {
           updatedAt: parsed.frontmatter.updatedAt,
         });
       } catch (error) {
-        console.error(`Error reading file ${file}:`, error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`Error reading file ${file}:`, error);
+        }
         // 개별 파일 오류는 무시하고 계속 진행
       }
     }
@@ -53,7 +55,9 @@ export async function getWikiList(): Promise<WikiListItem[]> {
 
     return items;
   } catch (error) {
-    console.error('Error getting wiki list:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error getting wiki list:', error);
+    }
     throw new Error('Failed to get wiki list');
   }
 }
@@ -76,7 +80,9 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
     const content = await readFile(filePath, 'utf-8');
     return await parseMarkdownFile(content, slug);
   } catch (error) {
-    console.error('Error getting wiki page:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error getting wiki page:', error);
+    }
     throw new Error('Failed to get wiki page');
   }
 }
@@ -117,7 +123,9 @@ export async function createWikiPage(
     const markdown = serializeToMarkdown(page);
     await writeFile(filePath, markdown, 'utf-8');
   } catch (error) {
-    console.error('Error creating wiki page:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error creating wiki page:', error);
+    }
     throw new Error('Failed to create wiki page');
   }
 }
@@ -161,7 +169,9 @@ export async function updateWikiPage(
     const markdown = serializeToMarkdown(updatedPage);
     await writeFile(filePath, markdown, 'utf-8');
   } catch (error) {
-    console.error('Error updating wiki page:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error updating wiki page:', error);
+    }
     throw new Error('Failed to update wiki page');
   }
 }
@@ -183,7 +193,9 @@ export async function deleteWikiPage(slug: string): Promise<void> {
 
     await unlink(filePath);
   } catch (error) {
-    console.error('Error deleting wiki page:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error deleting wiki page:', error);
+    }
     throw new Error('Failed to delete wiki page');
   }
 }
@@ -196,7 +208,73 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
     const allItems = await getWikiList();
     return filterWikiItems(allItems, query);
   } catch (error) {
-    console.error('Error searching wiki pages:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error searching wiki pages:', error);
+    }
     throw new Error('Failed to search wiki pages');
   }
+}
+
+/**
+ * FormData에서 Wiki 페이지 생성
+ */
+export async function createWikiPageFromFormData(formData: FormData): Promise<void> {
+  const slug = formData.get('slug') as string;
+  const title = formData.get('title') as string;
+  const content = formData.get('content') as string;
+  const description = (formData.get('description') as string) || undefined;
+  const category = (formData.get('category') as string) || undefined;
+  const tagsJson = formData.get('tags') as string;
+  let tags: string[] | undefined;
+
+  try {
+    tags = tagsJson ? JSON.parse(tagsJson) : undefined;
+  } catch {
+    tags = undefined;
+  }
+
+  if (!slug || !title || !content) {
+    throw new Error('슬러그, 제목, 내용을 모두 입력해주세요');
+  }
+
+  await createWikiPage(slug, title, content, {
+    description,
+    category,
+    tags,
+  });
+}
+
+/**
+ * FormData에서 Wiki 페이지 업데이트
+ */
+export async function updateWikiPageFromFormData(
+  slug: string,
+  formData: FormData,
+): Promise<void> {
+  const title = formData.get('title') as string;
+  const content = formData.get('content') as string;
+  const description = (formData.get('description') as string) || undefined;
+  const category = (formData.get('category') as string) || undefined;
+  const tagsJson = formData.get('tags') as string;
+  let tags: string[] | undefined;
+
+  try {
+    tags = tagsJson ? JSON.parse(tagsJson) : undefined;
+  } catch {
+    tags = undefined;
+  }
+
+  if (!title || !content) {
+    throw new Error('제목과 내용을 입력해주세요');
+  }
+
+  await updateWikiPage(slug, {
+    title,
+    content,
+    frontmatter: {
+      description,
+      category,
+      tags,
+    },
+  });
 }

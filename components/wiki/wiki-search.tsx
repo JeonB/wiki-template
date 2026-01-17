@@ -40,7 +40,9 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
       setResults(searchResults);
       setSelectedIndex(0);
     } catch (error) {
-      console.error("Search error:", error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Search error:', error);
+      }
       setResults([]);
     } finally {
       setIsSearching(false);

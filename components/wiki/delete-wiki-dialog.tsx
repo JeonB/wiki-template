@@ -22,10 +22,12 @@ interface DeleteWikiDialogProps {
 
 export default function DeleteWikiDialog({ slug, title }: DeleteWikiDialogProps) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const handleDelete = () => {
+    setError(null);
     startTransition(async () => {
       try {
         await deleteWikiPage(slug);
@@ -33,8 +35,7 @@ export default function DeleteWikiDialog({ slug, title }: DeleteWikiDialogProps)
         router.push('/');
         router.refresh();
       } catch (error) {
-        console.error('Failed to delete wiki page:', error);
-        alert('문서 삭제에 실패했습니다.');
+        setError(error instanceof Error ? error.message : '문서 삭제에 실패했습니다.');
       }
     });
   };
@@ -54,6 +55,11 @@ export default function DeleteWikiDialog({ slug, title }: DeleteWikiDialogProps)
             정말로 &quot;{title}&quot; 문서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             취소

@@ -15,32 +15,6 @@ export default function TableOfContents({ items, className }: TableOfContentsPro
   useEffect(() => {
     if (items.length === 0) return;
 
-    // #region agent log
-    const navElement = document.querySelector('nav[class*="sticky"]');
-    const mainElement = document.querySelector('main');
-    const asideElement = navElement?.closest('aside');
-    const parentFlex = navElement?.parentElement;
-    fetch('http://127.0.0.1:7242/ingest/be01d120-613a-4490-bf01-bf570c50ea02', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'components/wiki/table-of-contents.tsx:15',
-        message: 'TOC DOM structure check',
-        data: {
-          hasNav: !!navElement,
-          navInMain: mainElement?.contains(navElement) || false,
-          navInAside: !!asideElement,
-          parentIsFlex: parentFlex?.classList.contains('flex') || false,
-          asideParent: asideElement?.parentElement?.tagName || null,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'post-fix',
-        hypothesisId: 'C',
-      }),
-    }).catch(() => {});
-    // #endregion
-
     const observerOptions = {
       rootMargin: '-20% 0% -35% 0%',
       threshold: 0,

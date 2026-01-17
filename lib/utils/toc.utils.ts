@@ -91,10 +91,3 @@ export function addIdsToHeadings(html: string, headings: TocItem[]): string {
   return result;
 }
 
-/**
- * 정규식 특수문자 이스케이프
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-

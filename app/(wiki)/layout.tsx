@@ -5,24 +5,6 @@ import { getWikiList } from '@/lib/actions/wiki.actions';
 export default async function WikiLayout({ children }: { children: React.ReactNode }) {
   const items = await getWikiList();
 
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/be01d120-613a-4490-bf01-bf570c50ea02', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'app/(wiki)/layout.tsx:5',
-        message: 'WikiLayout rendering',
-        data: { itemsCount: items.length },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-
   return (
     <div className="min-h-screen bg-background">
       <WikiNav items={items} />

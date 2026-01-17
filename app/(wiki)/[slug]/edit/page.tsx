@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { getWikiPage, updateWikiPage } from '@/lib/actions/wiki.actions';
+import { getWikiPage, updateWikiPageFromFormData } from '@/lib/actions/wiki.actions';
 import EditWikiForm from '@/components/wiki/edit-wiki-form';
 
 interface EditWikiPageProps {
@@ -16,44 +16,14 @@ export default async function EditWikiPage({ params }: EditWikiPageProps) {
 
   async function handleUpdate(formData: FormData) {
     'use server';
-    const title = formData.get('title') as string;
-    const content = formData.get('content') as string;
-    const description = (formData.get('description') as string) || undefined;
-    const category = (formData.get('category') as string) || undefined;
-    const tagsJson = formData.get('tags') as string;
-    let tags: string[] | undefined;
-
-    try {
-      tags = tagsJson ? JSON.parse(tagsJson) : undefined;
-    } catch {
-      tags = undefined;
-    }
-
-    if (!title || !content) {
-      throw new Error('제목과 내용을 입력해주세요');
-    }
-
-    await updateWikiPage(slug, {
-      title,
-      content,
-      frontmatter: {
-        description,
-        category,
-        tags,
-      },
-    });
+    await updateWikiPageFromFormData(slug, formData);
     redirect(`/${slug}`);
   }
 
   return (
     <div>
       <h1 className="mb-6 text-3xl font-bold">문서 수정: {page.frontmatter.title}</h1>
-      <EditWikiForm
-        page={page}
-        onSubmit={async (formData: FormData) => {
-          await handleUpdate(formData);
-        }}
-      />
+      <EditWikiForm page={page} onSubmit={handleUpdate} />
     </div>
   );
 }

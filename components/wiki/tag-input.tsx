@@ -4,6 +4,7 @@ import { useState, KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { normalizeTag, isValidTag as validateTag } from '@/lib/utils/tag.utils';
 
 interface TagInputProps {
   tags: string[];
@@ -22,22 +23,8 @@ export default function TagInput({
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
 
-  const normalizeTag = (tag: string): string => {
-    return tag
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-_]/g, '')
-      .slice(0, maxLength);
-  };
-
-  const isValidTag = (tag: string): boolean => {
-    const normalized = normalizeTag(tag);
-    return normalized.length > 0 && normalized.length <= maxLength;
-  };
-
   const addTag = (tag: string) => {
-    const normalized = normalizeTag(tag);
+    const normalized = normalizeTag(tag, maxLength);
     if (!normalized || normalized.length === 0) return;
 
     // 중복 체크
@@ -47,7 +34,7 @@ export default function TagInput({
     }
 
     // 유효성 검사
-    if (!isValidTag(normalized)) return;
+    if (!validateTag(normalized, maxLength)) return;
 
     onChange([...tags, normalized]);
     setInputValue('');

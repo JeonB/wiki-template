@@ -3,10 +3,10 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import WikiEditor from '@/components/wiki/wiki-editor';
-import TagInput from '@/components/wiki/tag-input';
+import WikiFormFields from '@/components/wiki/wiki-form-fields';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { normalizeSlug } from '@/lib/utils/file.utils';
 
 interface NewWikiFormProps {
   onSubmit: (formData: FormData) => Promise<void>;
@@ -19,24 +19,30 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     startTransition(async () => {
       const formData = new FormData(e.currentTarget);
       try {
         await onSubmit(formData);
       } catch (error) {
-        console.error('Failed to create wiki page:', error);
-        alert(error instanceof Error ? error.message : '문서 생성에 실패했습니다.');
+        setError(error instanceof Error ? error.message : '문서 생성에 실패했습니다.');
       }
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
       <div>
         <label htmlFor="wiki-slug" className="mb-2 block text-sm font-medium">
           슬러그 (URL에 사용되는 고유한 식별자)
@@ -45,51 +51,24 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
           id="wiki-slug"
           name="slug"
           value={slug}
-          onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))}
+          onChange={(e) => setSlug(normalizeSlug(e.target.value))}
           placeholder="예: getting-started"
           required
         />
         <p className="mt-2 text-sm text-muted-foreground">영문 소문자, 숫자, 하이픈(-)만 사용 가능합니다.</p>
       </div>
       <WikiEditor title={title} content={content} onTitleChange={setTitle} onContentChange={setContent} />
-      <div>
-        <label htmlFor="wiki-description" className="mb-2 block text-sm font-medium">
-          설명 (선택사항)
-        </label>
-        <Textarea
-          id="wiki-description"
-          name="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="문서에 대한 간단한 설명을 입력하세요"
-          rows={2}
-          className="resize-none"
-        />
-      </div>
-      <div>
-        <label htmlFor="wiki-category" className="mb-2 block text-sm font-medium">
-          카테고리 (선택사항)
-        </label>
-        <Input
-          id="wiki-category"
-          name="category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="예: 가이드, 참고자료, FAQ"
-        />
-      </div>
-      <div>
-        <label htmlFor="wiki-tags" className="mb-2 block text-sm font-medium">
-          태그 (선택사항)
-        </label>
-        <TagInput tags={tags} onChange={setTags} />
-      </div>
+      <WikiFormFields
+        description={description}
+        category={category}
+        tags={tags}
+        onDescriptionChange={setDescription}
+        onCategoryChange={setCategory}
+        onTagsChange={setTags}
+      />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="content" value={content} />
-      <input type="hidden" name="description" value={description} />
-      <input type="hidden" name="category" value={category} />
-      <input type="hidden" name="tags" value={JSON.stringify(tags)} />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>
           취소
