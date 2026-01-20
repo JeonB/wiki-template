@@ -120,13 +120,13 @@
 - ✅ 검색 기능 추가
 - ✅ 헤더 UI 개선
 - ✅ 로딩 스켈레톤 추가
-- 에러 바운더리 추가
+- ✅ 에러 바운더리 추가 (`app/error.tsx`, `app/(wiki)/error.tsx`, `components/error-fallback.tsx`)
 
-### Phase 2 (단기)
-- 본문 내용 검색 추가
-- 카테고리 필터링
-- 최근 문서 목록
-- 검색 히스토리
+### Phase 2 (단기) ✅
+- ✅ 본문 내용 검색 추가 (searchWikiPages에 matter로 본문 검색, 검색 모달 설명 문구 반영)
+- ✅ 카테고리 필터링 (`/?category=`, CategoryFilter, 목록 필터)
+- ✅ 최근 문서 목록 (useRecentPages, RecentPagesRecorder, 사이드바 "최근 문서")
+- ✅ 검색 히스토리 (useSearchHistory, 검색 모달 최근 검색어·기록 지우기)
 
 ### Phase 3 (중기)
 - 이미지 업로드

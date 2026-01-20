@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { searchWikiPages } from "@/lib/actions/wiki.actions";
 import { highlightText } from "@/lib/utils/search.utils";
+import { useSearchHistory } from "@/lib/hooks/use-search-history";
 import type { WikiListItem } from "@/lib/types/wiki.types";
 
 interface WikiSearchProps {
@@ -26,6 +28,7 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
+  const { history, add, clear } = useSearchHistory();
 
   // 검색 실행
   const performSearch = useCallback(async (searchQuery: string) => {
@@ -112,6 +115,7 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
   };
 
   const handleSelectResult = (item: WikiListItem) => {
+    if (query.trim()) add(query);
     router.push(`/${item.slug}`);
     onOpenChange(false);
     setQuery("");
@@ -124,7 +128,7 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
         <DialogHeader>
           <DialogTitle>문서 검색</DialogTitle>
           <DialogDescription>
-            제목, 설명, 태그, 카테고리에서 검색합니다
+            제목, 설명, 태그, 카테고리, 본문 내용에서 검색합니다
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -151,8 +155,42 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
             </div>
           )}
           {!isSearching && !query && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              검색어를 입력하여 문서를 찾아보세요.
+            <div className="py-6">
+              {history.length > 0 ? (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <Clock className="h-4 w-4" aria-hidden />
+                      최근 검색어
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={clear}
+                    >
+                      기록 지우기
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {history.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setQuery(h)}
+                        className="rounded-full border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  검색어를 입력하여 문서를 찾아보세요.
+                </p>
+              )}
             </div>
           )}
           {!isSearching && results.length > 0 && (

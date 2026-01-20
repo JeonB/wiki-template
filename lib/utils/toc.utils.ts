@@ -28,7 +28,7 @@ export function extractHeadings(content: string): TocItem[] {
   while ((match = headingRegex.exec(content)) !== null) {
     const level = match[1].length;
     const text = match[2].trim();
-    let id = slugify(text);
+    const id = slugify(text);
 
     // 중복 ID 처리
     let uniqueId = id;

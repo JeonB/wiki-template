@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // next-themes: 클라이언트 마운트 후에만 테마 UI 표시 (hydration 불일치 방지)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 플래그용
     setMounted(true);
   }, []);
 

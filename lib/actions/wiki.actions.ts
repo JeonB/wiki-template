@@ -3,10 +3,11 @@
 import { readFile, writeFile, unlink, readdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import matter from 'gray-matter';
 import { wikiConfig } from '@/lib/config/wiki.config';
-import { getFilePath, filenameToSlug, isValidSlug, slugToFilename } from '@/lib/utils/file.utils';
+import { getFilePath, filenameToSlug, isValidSlug } from '@/lib/utils/file.utils';
 import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
-import { filterWikiItems } from '@/lib/utils/search.utils';
+import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
 
 /**
@@ -201,12 +202,54 @@ export async function deleteWikiPage(slug: string): Promise<void> {
 }
 
 /**
- * Wiki 페이지 검색
+ * Wiki 페이지 검색 (제목, 설명, 태그, 카테고리, 본문 내용 포함)
  */
 export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
   try {
-    const allItems = await getWikiList();
-    return filterWikiItems(allItems, query);
+    const q = query.trim();
+    if (!q) return [];
+
+    if (!existsSync(wikiConfig.contentDir)) {
+      return [];
+    }
+
+    const files = await readdir(wikiConfig.contentDir);
+    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const results: WikiListItem[] = [];
+
+    for (const file of markdownFiles) {
+      try {
+        const filePath = join(wikiConfig.contentDir, file);
+        const raw = await readFile(filePath, 'utf-8');
+        const { data, content: body } = matter(raw);
+        const slug = filenameToSlug(file);
+
+        const item: WikiListItem = {
+          slug,
+          title: data.title || 'Untitled',
+          description: data.description,
+          category: data.category,
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          updatedAt: data.updatedAt || data.date || new Date().toISOString(),
+        };
+
+        const metaMatch = matchesWikiItem(item, q);
+        const contentMatch = matchesSearch((body ?? '').trim(), q);
+        if (metaMatch || contentMatch) {
+          results.push(item);
+        }
+      } catch {
+        // 개별 파일 오류는 무시
+      }
+    }
+
+    results.sort((a, b) => {
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return results;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error searching wiki pages:', error);
