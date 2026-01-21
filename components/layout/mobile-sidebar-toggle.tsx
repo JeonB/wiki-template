@@ -34,7 +34,6 @@ export default function MobileSidebarToggle({ items }: MobileSidebarToggleProps)
         <DialogContent className="max-w-[280px] p-0 sm:max-w-[280px]">
           <DialogHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
-              <DialogTitle>문서 목록</DialogTitle>
               <Button
                 variant="ghost"
                 size="icon"

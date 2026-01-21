@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, FileText, Home, History } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRecentPages } from '@/lib/hooks/use-recent-pages';
 import type { WikiListItem } from '@/lib/types/wiki.types';
 
 interface WikiSidebarProps {
@@ -20,9 +19,7 @@ interface CategoryGroup {
 
 export default function WikiSidebar({ items, className }: WikiSidebarProps) {
   const pathname = usePathname();
-  const { recent } = useRecentPages();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['']));
-  const recentList = recent.slice(0, 5);
 
   // 카테고리별로 그룹화
   const groupedItems = items.reduce((acc, item) => {
@@ -80,33 +77,6 @@ export default function WikiSidebar({ items, className }: WikiSidebarProps) {
           <Home className="h-4 w-4" />
           홈
         </Link>
-
-        {recentList.length > 0 && (
-          <div className="mt-4">
-            <h3 className="mb-1 flex items-center gap-2 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <History className="h-4 w-4" aria-hidden />
-              최근 문서
-            </h3>
-            <ul className="space-y-1">
-              {recentList.map((p) => (
-                <li key={p.slug}>
-                  <Link
-                    href={`/${p.slug}`}
-                    className={cn(
-                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
-                      pathname === `/${p.slug}`
-                        ? 'bg-accent text-accent-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                    )}
-                  >
-                    <FileText className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{p.title}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <div className="mt-4 space-y-1">
           {categoryGroups.map((group) => {

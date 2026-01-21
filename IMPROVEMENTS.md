@@ -125,7 +125,6 @@
 ### Phase 2 (단기) ✅
 - ✅ 본문 내용 검색 추가 (searchWikiPages에 matter로 본문 검색, 검색 모달 설명 문구 반영)
 - ✅ 카테고리 필터링 (`/?category=`, CategoryFilter, 목록 필터)
-- ✅ 최근 문서 목록 (useRecentPages, RecentPagesRecorder, 사이드바 "최근 문서")
 - ✅ 검색 히스토리 (useSearchHistory, 검색 모달 최근 검색어·기록 지우기)
 
 ### Phase 3 (중기)

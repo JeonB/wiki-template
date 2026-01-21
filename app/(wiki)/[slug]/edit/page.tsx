@@ -1,6 +1,9 @@
-import { notFound, redirect } from 'next/navigation';
-import { getWikiPage, updateWikiPageFromFormData } from '@/lib/actions/wiki.actions';
-import EditWikiForm from '@/components/wiki/edit-wiki-form';
+import { notFound, redirect } from "next/navigation";
+import {
+  getWikiPage,
+  updateWikiPageFromFormData,
+} from "@/lib/actions/wiki.actions";
+import EditWikiForm from "@/components/wiki/edit-wiki-form";
 
 interface EditWikiPageProps {
   params: Promise<{ slug: string }>;
@@ -15,14 +18,13 @@ export default async function EditWikiPage({ params }: EditWikiPageProps) {
   }
 
   async function handleUpdate(formData: FormData) {
-    'use server';
+    "use server";
     await updateWikiPageFromFormData(slug, formData);
     redirect(`/${slug}`);
   }
 
   return (
-    <div>
-      <h1 className="mb-6 text-3xl font-bold">문서 수정: {page.frontmatter.title}</h1>
+    <div className="p-10">
       <EditWikiForm page={page} onSubmit={handleUpdate} />
     </div>
   );

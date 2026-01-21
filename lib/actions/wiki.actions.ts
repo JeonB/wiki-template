@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { readFile, writeFile, unlink, readdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -193,6 +194,7 @@ export async function deleteWikiPage(slug: string): Promise<void> {
     }
 
     await unlink(filePath);
+    revalidatePath('/', 'layout');
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error deleting wiki page:', error);
@@ -262,7 +264,9 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
  * FormData에서 Wiki 페이지 생성
  */
 export async function createWikiPageFromFormData(formData: FormData): Promise<void> {
-  const slug = formData.get('slug') as string;
+  const slug = ((formData.get('slug') as string) ?? '')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
   const description = (formData.get('description') as string) || undefined;
@@ -285,6 +289,7 @@ export async function createWikiPageFromFormData(formData: FormData): Promise<vo
     category,
     tags,
   });
+  revalidatePath('/', 'layout');
 }
 
 /**
@@ -320,4 +325,5 @@ export async function updateWikiPageFromFormData(
       tags,
     },
   });
+  revalidatePath('/', 'layout');
 }

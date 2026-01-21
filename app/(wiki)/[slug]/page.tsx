@@ -7,7 +7,6 @@ import MobileTocToggle from '@/components/layout/mobile-toc-toggle';
 import Breadcrumbs from '@/components/wiki/breadcrumbs';
 import ReadingProgress from '@/components/wiki/reading-progress';
 import NextPrevLinks from '@/components/wiki/next-prev-links';
-import RecentPagesRecorder from '@/components/wiki/recent-pages-recorder';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import DeleteWikiDialog from '@/components/wiki/delete-wiki-dialog';
@@ -35,7 +34,6 @@ export default async function WikiPage({ params }: WikiPageProps) {
 
   return (
     <>
-      <RecentPagesRecorder slug={slug} title={page.frontmatter.title} />
       <ReadingProgress />
       <div className="flex">
         {/* 중앙 컨텐츠 */}
