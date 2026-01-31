@@ -16,7 +16,7 @@
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **UI**: Tailwind CSS + shadcn/ui
-- **마크다운**: remark, remark-html, remark-gfm
+- **마크다운**: remark, remark-rehype, remark-gfm, rehype-sanitize
 - **스타일링**: Tailwind CSS Typography
 
 ## 시작하기
@@ -116,21 +116,29 @@ export const wikiConfig = {
 
 ## 배포
 
-### Vercel 배포
+### 중요: 배포 플랫폼 제한
 
-1. GitHub에 저장소를 푸시합니다
-2. [Vercel](https://vercel.com)에서 프로젝트를 import합니다
-3. 배포 설정에서 Build Command는 `pnpm build`를 사용합니다
+이 프로젝트는 **파일시스템 기반**으로 문서를 저장합니다. 문서 생성/수정/삭제 시 `content/` 디렉토리에 직접 쓰기를 수행합니다.
 
-### Docker 배포
+- **Vercel**: 지원하지 않음. Vercel 서버리스 함수는 읽기 전용 파일시스템을 사용하므로 문서 쓰기 동작이 불가능합니다.
+- **권장 플랫폼**: Docker, VPS, Railway, Render 등 파일시스템 쓰기를 지원하는 환경
+
+### Docker 배포 (권장)
 
 ```bash
 # Docker 이미지 빌드
 docker build -t wiki-template .
 
-# 컨테이너 실행
-docker run -p 3000:3000 wiki-template
+# 컨테이너 실행 (content/ 영속성을 위해 볼륨 마운트)
+docker run -p 3000:3000 -v $(pwd)/content:/app/content wiki-template
 ```
+
+- `-v $(pwd)/content:/app/content`: 호스트의 `content/` 디렉터리를 컨테이너에 마운트하여 문서가 컨테이너 재시작 후에도 유지되도록 합니다.
+
+### 기타 배포 옵션
+
+- **Railway, Render**: Dockerfile 기반 배포 후 Persistent Disk/Volume에 `content/` 마운트
+- **VPS (AWS EC2, GCP, DigitalOcean 등)**: Docker 또는 `pnpm build && pnpm start` 직접 실행
 
 ### 주의사항
 

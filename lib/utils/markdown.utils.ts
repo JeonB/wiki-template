@@ -2,7 +2,9 @@ import matter from 'gray-matter';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
-import remarkHtml from 'remark-html';
+import remarkRehype from 'remark-rehype';
+import rehypeSanitize from 'rehype-sanitize';
+import rehypeStringify from 'rehype-stringify';
 import { extractHeadings, addIdsToHeadings } from './toc.utils';
 import type { WikiFrontmatter, WikiPage } from '@/lib/types/wiki.types';
 
@@ -22,12 +24,14 @@ export async function parseMarkdownFile(content: string, slug: string): Promise<
     author: data.author || '',
   };
 
-  // 마크다운을 HTML로 변환 (remark 대신 unified+remarkParse 사용.
-  // remark()는 remark-stringify를 포함해 마크다운 문자열이 출력되므로, HTML 컴파일만 하려면 이 파이프라인 사용)
+  // 마크다운을 HTML로 변환 (remark-rehype + rehype-stringify 사용)
+  // rehype-sanitize로 XSS 방지: raw HTML, script, 이벤트 핸들러 등 제거
   const processedContent = await unified()
     .use(remarkParse)
     .use(remarkGfm)
-    .use(remarkHtml)
+    .use(remarkRehype)
+    .use(rehypeSanitize)
+    .use(rehypeStringify)
     .process(body);
   let html = String(processedContent);
 

@@ -1,0 +1,24 @@
+# Dependencies - will be installed fresh in builder
+node_modules
+.pnp
+.pnp.*
+.yarn
+
+# Build output - generated during Docker build
+.next
+out
+build
+
+# Development / misc
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Env
+.env*
