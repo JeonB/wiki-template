@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @layer base {
   :root {
@@ -56,7 +57,7 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* 스크롤 마진을 위한 스타일 */
+  /* 목차 앵커용 스크롤 마진 (typography 플러그인 prose-headings:scroll-mt-20과 함께 사용) */
   .wiki-content h1,
   .wiki-content h2,
   .wiki-content h3,
