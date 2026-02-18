@@ -40,7 +40,7 @@ export default function WikiViewer({ page }: WikiViewerProps) {
         </div>
       </header>
       <div
-        className="wiki-content prose prose-neutral dark:prose-invert prose-headings:scroll-mt-20 max-w-none"
+        className="wiki-content prose prose-slate dark:prose-invert prose-headings:scroll-mt-20 max-w-none prose-pre:bg-slate-200 prose-pre:text-slate-800 dark:prose-pre:bg-slate-800 dark:prose-pre:text-slate-200"
         dangerouslySetInnerHTML={{ __html: page.html || "" }}
       />
     </article>
