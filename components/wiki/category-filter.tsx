@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { UNCATEGORIZED_LABEL } from '@/lib/config/wiki.config';
 
 interface CategoryFilterProps {
   categories: string[];
@@ -24,7 +25,7 @@ export default function CategoryFilter({ categories, current }: CategoryFilterPr
         전체
       </Link>
       {categories.map((c) => {
-        const label = c === '' ? '미분류' : c;
+        const label = c === '' ? UNCATEGORIZED_LABEL : c;
         const href = c === '' ? '/?category=' : `/?category=${encodeURIComponent(c)}`;
         const isActive = current === c;
         return (

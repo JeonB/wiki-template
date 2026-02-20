@@ -44,14 +44,6 @@ export function matchesWikiItem(item: WikiListItem, query: string): boolean {
 }
 
 /**
- * Wiki 목록에서 검색어와 일치하는 항목 필터링
- */
-export function filterWikiItems(items: WikiListItem[], query: string): WikiListItem[] {
-  if (!query) return items;
-  return items.filter((item) => matchesWikiItem(item, query));
-}
-
-/**
  * 검색 결과 하이라이트를 위한 텍스트 분할
  */
 export function highlightText(text: string, query: string): Array<{ text: string; highlight: boolean }> {

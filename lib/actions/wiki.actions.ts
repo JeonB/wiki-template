@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { readFile, writeFile, unlink, readdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -261,6 +262,15 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
 }
 
 /**
+ * Wiki 페이지 생성 액션 (redirect 포함)
+ */
+export async function createWikiPageAction(formData: FormData): Promise<void> {
+  await createWikiPageFromFormData(formData);
+  const slug = (formData.get('slug') as string) ?? '';
+  redirect(`/${slug}`);
+}
+
+/**
  * FormData에서 Wiki 페이지 생성
  */
 export async function createWikiPageFromFormData(formData: FormData): Promise<void> {
@@ -290,6 +300,14 @@ export async function createWikiPageFromFormData(formData: FormData): Promise<vo
     tags,
   });
   revalidatePath('/', 'layout');
+}
+
+/**
+ * Wiki 페이지 업데이트 액션 (redirect 포함)
+ */
+export async function updateWikiPageAction(slug: string, formData: FormData): Promise<void> {
+  await updateWikiPageFromFormData(slug, formData);
+  redirect(`/${slug}`);
 }
 
 /**

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, FileText, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UNCATEGORIZED_LABEL } from '@/lib/config/wiki.config';
 import type { WikiListItem } from '@/lib/types/wiki.types';
 
 interface WikiSidebarProps {
@@ -23,7 +24,7 @@ export default function WikiSidebar({ items, className }: WikiSidebarProps) {
 
   // 카테고리별로 그룹화
   const groupedItems = items.reduce((acc, item) => {
-    const category = item.category || '기타';
+    const category = item.category || UNCATEGORIZED_LABEL;
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -37,12 +38,10 @@ export default function WikiSidebar({ items, className }: WikiSidebarProps) {
     items,
   }));
 
-  // 카테고리 정렬 (빈 문자열이면 맨 위, '기타'는 맨 아래)
+  // 카테고리 정렬 (미분류는 맨 위)
   categoryGroups.sort((a, b) => {
-    if (a.category === '기타') return 1;
-    if (b.category === '기타') return -1;
-    if (a.category === '' || !a.category) return -1;
-    if (b.category === '' || !b.category) return 1;
+    if (a.category === UNCATEGORIZED_LABEL) return -1;
+    if (b.category === UNCATEGORIZED_LABEL) return 1;
     return a.category.localeCompare(b.category, 'ko');
   });
 
@@ -81,7 +80,7 @@ export default function WikiSidebar({ items, className }: WikiSidebarProps) {
         <div className="mt-4 space-y-1">
           {categoryGroups.map((group) => {
             const isExpanded = expandedCategories.has(group.category);
-            const hasCategory = group.category && group.category !== '기타';
+            const hasCategory = group.category && group.category !== UNCATEGORIZED_LABEL;
 
             return (
               <div key={group.category} className="space-y-1">

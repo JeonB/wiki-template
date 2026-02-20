@@ -24,14 +24,6 @@ export function getFilePath(slug: string): string {
 }
 
 /**
- * 파일명이 유효한지 확인
- */
-export function isValidFilename(filename: string): boolean {
-  const ext = extname(filename);
-  return wikiConfig.allowedExtensions.includes(ext as '.md' | '.markdown');
-}
-
-/**
  * 슬러그가 유효한지 확인
  */
 export function isValidSlug(slug: string): boolean {

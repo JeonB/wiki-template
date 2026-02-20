@@ -1,7 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   getWikiPage,
-  updateWikiPageFromFormData,
+  updateWikiPageAction,
 } from "@/lib/actions/wiki.actions";
 import EditWikiForm from "@/components/wiki/edit-wiki-form";
 
@@ -17,15 +17,9 @@ export default async function EditWikiPage({ params }: EditWikiPageProps) {
     notFound();
   }
 
-  async function handleUpdate(formData: FormData) {
-    "use server";
-    await updateWikiPageFromFormData(slug, formData);
-    redirect(`/${slug}`);
-  }
-
   return (
     <div className="p-10">
-      <EditWikiForm page={page} onSubmit={handleUpdate} />
+      <EditWikiForm page={page} onSubmit={updateWikiPageAction.bind(null, slug)} />
     </div>
   );
 }
