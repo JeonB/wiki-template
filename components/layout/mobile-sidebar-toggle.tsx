@@ -1,22 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import WikiSidebar from './wiki-sidebar';
-import type { WikiListItem } from '@/lib/types/wiki.types';
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import WikiSidebar from "./wiki-sidebar";
+import type { WikiListItem } from "@/lib/types/wiki.types";
 
 interface MobileSidebarToggleProps {
   items: WikiListItem[];
 }
 
-export default function MobileSidebarToggle({ items }: MobileSidebarToggleProps) {
+export default function MobileSidebarToggle({
+  items,
+}: MobileSidebarToggleProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -52,4 +49,3 @@ export default function MobileSidebarToggle({ items }: MobileSidebarToggleProps)
     </>
   );
 }
-

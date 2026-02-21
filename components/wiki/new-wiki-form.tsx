@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, unstable_rethrow } from 'next/navigation';
 import WikiEditor from '@/components/wiki/wiki-editor';
 import WikiFormFields from '@/components/wiki/wiki-form-fields';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
       try {
         await onSubmit(formData);
       } catch (error) {
+        unstable_rethrow(error);
         setError(error instanceof Error ? error.message : '문서 생성에 실패했습니다.');
       }
     });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, unstable_rethrow } from 'next/navigation';
 import WikiEditor from '@/components/wiki/wiki-editor';
 import WikiFormFields from '@/components/wiki/wiki-form-fields';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ export default function EditWikiForm({ page, onSubmit }: EditWikiFormProps) {
       try {
         await onSubmit(formData);
       } catch (error) {
+        unstable_rethrow(error);
         setError(error instanceof Error ? error.message : '문서 수정에 실패했습니다.');
       }
     });

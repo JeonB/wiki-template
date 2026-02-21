@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { searchWikiPages } from "@/lib/actions/wiki.actions";
 import { highlightText } from "@/lib/utils/search.utils";
 import { useSearchHistory } from "@/lib/hooks/use-search-history";
@@ -83,18 +84,14 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
 
   // 모달이 열릴 때 포커스 설정
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      setResults([]);
-      setSelectedIndex(0);
-      // 입력창에 포커스 (약간의 지연 후)
-      setTimeout(() => {
-        const input = document.querySelector(
-          "[data-search-input]"
-        ) as HTMLInputElement;
-        input?.focus();
-      }, 100);
-    }
+    if (!open) return;
+    setQuery("");
+    setResults([]);
+    setSelectedIndex(0);
+    const timer = setTimeout(() => {
+      document.getElementById("wiki-search-input")?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
   }, [open]);
 
   // 키보드 네비게이션
@@ -135,6 +132,8 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="wiki-search-input"
+              name="search"
               data-search-input
               type="text"
               placeholder="검색어를 입력하세요... (Cmd/Ctrl + K)"
@@ -202,11 +201,12 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
                     key={item.slug}
                     type="button"
                     onClick={() => handleSelectResult(item)}
-                    className={`w-full rounded-md border p-3 text-left transition-colors ${
+                    className={cn(
+                      "w-full rounded-md border p-3 text-left transition-colors",
                       index === selectedIndex
                         ? "border-primary bg-accent"
-                        : "border-transparent hover:bg-accent"
-                    }`}
+                        : "border-transparent hover:bg-accent",
+                    )}
                   >
                     <div className="flex items-start gap-3">
                       <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />

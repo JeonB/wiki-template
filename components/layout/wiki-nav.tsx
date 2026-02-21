@@ -42,7 +42,7 @@ export default function WikiNav({ items }: WikiNavProps) {
             </Button>
             <Link href="/new">
               <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />새 문서
+                <Plus className="mr-2 h-4 w-4" /> 새 문서
               </Button>
             </Link>
             <ThemeToggle />
