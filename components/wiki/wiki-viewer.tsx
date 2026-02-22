@@ -11,25 +11,11 @@ export default function WikiViewer({ page }: WikiViewerProps) {
         <h1 className="mb-2 text-3xl font-semibold">
           {page.frontmatter.title}
         </h1>
-        {page.frontmatter.description && (
-          <p className="text-muted-foreground text-lg">
-            {page.frontmatter.description}
-          </p>
-        )}
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {page.frontmatter.category && (
             <span className="rounded-full bg-secondary px-3 py-1">
               {page.frontmatter.category}
             </span>
-          )}
-          {page.frontmatter.tags && page.frontmatter.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {page.frontmatter.tags.map((tag) => (
-                <span key={tag} className="rounded-full bg-muted px-3 py-1">
-                  #{tag}
-                </span>
-              ))}
-            </div>
           )}
           {page.frontmatter.updatedAt && (
             <span>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { WikiListItem } from '@/lib/types/wiki.types';
 
 interface WikiListProps {
@@ -25,24 +25,11 @@ export default function WikiList({ items }: WikiListProps) {
           <Card className="h-full transition-shadow hover:shadow-md">
             <CardHeader>
               <CardTitle className="line-clamp-2">{item.title}</CardTitle>
-              {item.description && <CardDescription className="line-clamp-2">{item.description}</CardDescription>}
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2 text-sm">
                 {item.category && (
                   <span className="rounded-full bg-secondary px-2 py-1 text-xs">{item.category}</span>
-                )}
-                {item.tags && item.tags.length > 0 && (
-                  <>
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-full bg-muted px-2 py-1 text-xs">
-                        #{tag}
-                      </span>
-                    ))}
-                    {item.tags.length > 3 && (
-                      <span className="text-muted-foreground text-xs">+{item.tags.length - 3}</span>
-                    )}
-                  </>
                 )}
               </div>
               {item.updatedAt && (

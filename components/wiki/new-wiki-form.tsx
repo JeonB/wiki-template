@@ -16,9 +16,7 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -59,14 +57,7 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
         <p className="mt-2 text-sm text-muted-foreground">영문 소문자, 숫자, 하이픈(-)만 사용 가능합니다.</p>
       </div>
       <WikiEditor title={title} content={content} onTitleChange={setTitle} onContentChange={setContent} />
-      <WikiFormFields
-        description={description}
-        category={category}
-        tags={tags}
-        onDescriptionChange={setDescription}
-        onCategoryChange={setCategory}
-        onTagsChange={setTags}
-      />
+      <WikiFormFields category={category} onCategoryChange={setCategory} />
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="content" value={content} />

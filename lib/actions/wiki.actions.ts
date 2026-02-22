@@ -116,7 +116,6 @@ export async function createWikiPage(
         ...wikiConfig.defaultFrontmatter,
         ...frontmatter,
         title,
-        tags: frontmatter?.tags ? [...frontmatter.tags] : [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -279,25 +278,14 @@ export async function createWikiPageFromFormData(formData: FormData): Promise<vo
     .replace(/-+$/, '');
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
-  const description = (formData.get('description') as string) || undefined;
   const category = (formData.get('category') as string) || undefined;
-  const tagsJson = formData.get('tags') as string;
-  let tags: string[] | undefined;
-
-  try {
-    tags = tagsJson ? JSON.parse(tagsJson) : undefined;
-  } catch {
-    tags = undefined;
-  }
 
   if (!slug || !title || !content) {
     throw new Error('슬러그, 제목, 내용을 모두 입력해주세요');
   }
 
   await createWikiPage(slug, title, content, {
-    description,
     category,
-    tags,
   });
   revalidatePath('/', 'layout');
 }
@@ -319,16 +307,7 @@ export async function updateWikiPageFromFormData(
 ): Promise<void> {
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
-  const description = (formData.get('description') as string) || undefined;
   const category = (formData.get('category') as string) || undefined;
-  const tagsJson = formData.get('tags') as string;
-  let tags: string[] | undefined;
-
-  try {
-    tags = tagsJson ? JSON.parse(tagsJson) : undefined;
-  } catch {
-    tags = undefined;
-  }
 
   if (!title || !content) {
     throw new Error('제목과 내용을 입력해주세요');
@@ -338,9 +317,7 @@ export async function updateWikiPageFromFormData(
     title,
     content,
     frontmatter: {
-      description,
       category,
-      tags,
     },
   });
   revalidatePath('/', 'layout');

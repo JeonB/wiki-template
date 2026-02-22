@@ -15,9 +15,7 @@ interface EditWikiFormProps {
 export default function EditWikiForm({ page, onSubmit }: EditWikiFormProps) {
   const [title, setTitle] = useState(page.frontmatter.title);
   const [content, setContent] = useState(page.content);
-  const [description, setDescription] = useState(page.frontmatter.description || '');
   const [category, setCategory] = useState(page.frontmatter.category || '');
-  const [tags, setTags] = useState<string[]>(page.frontmatter.tags || []);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -44,14 +42,7 @@ export default function EditWikiForm({ page, onSubmit }: EditWikiFormProps) {
         </div>
       )}
       <WikiEditor title={title} content={content} onTitleChange={setTitle} onContentChange={setContent} />
-      <WikiFormFields
-        description={description}
-        category={category}
-        tags={tags}
-        onDescriptionChange={setDescription}
-        onCategoryChange={setCategory}
-        onTagsChange={setTags}
-      />
+      <WikiFormFields category={category} onCategoryChange={setCategory} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="content" value={content} />
       <div className="flex justify-end gap-2">

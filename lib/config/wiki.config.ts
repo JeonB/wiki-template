@@ -9,8 +9,6 @@ export const wikiConfig = {
   allowedExtensions: ['.md', '.markdown'] as const,
   defaultFrontmatter: {
     title: 'Untitled',
-    description: '',
     category: '',
-    tags: [],
   },
 } as const;

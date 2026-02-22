@@ -225,30 +225,11 @@ export default function WikiSearch({ open, onOpenChange }: WikiSearchProps) {
                             )
                           )}
                         </h3>
-                        {item.description && (
-                          <p className="text-muted-foreground mt-1 text-sm line-clamp-1">
-                            {item.description}
-                          </p>
+                        {item.category && (
+                          <span className="text-muted-foreground mt-1 inline-block rounded-full bg-secondary px-2 py-0.5 text-xs">
+                            {item.category}
+                          </span>
                         )}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {item.category && (
-                            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                              {item.category}
-                            </span>
-                          )}
-                          {item.tags && item.tags.length > 0 && (
-                            <>
-                              {item.tags.slice(0, 2).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full bg-muted px-2 py-0.5 text-xs"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </button>

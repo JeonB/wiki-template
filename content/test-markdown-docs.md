@@ -1,7 +1,8 @@
 ---
 title: 드개재
+category: 가이드
 createdAt: '2026-02-19T10:40:47.351Z'
-updatedAt: '2026-02-19T11:11:55.165Z'
+updatedAt: '2026-02-23T12:59:47.837Z'
 ---
 # Hello World
 ## Markdown test

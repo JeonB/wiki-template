@@ -1,10 +1,6 @@
 ---
 title: Wiki 시작하기
-description: 이 Wiki 템플릿 사용 방법을 안내합니다.
 category: 가이드
-tags:
-  - 가이드
-  - 시작하기
 createdAt: "2026-01-01T00:00:00.000Z"
 updatedAt: "2026-01-01T00:00:00.000Z"
 ---

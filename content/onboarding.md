@@ -1,10 +1,6 @@
 ---
 title: 신입사원 온보딩
-description: 신입사원을 위한 온보딩 가이드입니다.
 category: 인사
-tags:
-  - 온보딩
-  - 신입사원
 createdAt: "2026-01-01T00:00:00.000Z"
 updatedAt: "2026-01-01T00:00:00.000Z"
 ---
