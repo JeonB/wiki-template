@@ -40,9 +40,7 @@ export default async function WikiPage({ params }: WikiPageProps) {
         <div className="flex-1 min-w-0">
           <div className="mx-auto max-w-4xl px-4 py-8 lg:px-8">
             <Breadcrumbs items={breadcrumbItems} />
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex-1" />
-              <div className="flex gap-2">
+            <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
                 {/* 모바일 목차 토글 */}
                 {page.toc && page.toc.length > 0 && <MobileTocToggle items={page.toc} />}
                 <Link href={`/${slug}/edit`}>
@@ -52,7 +50,6 @@ export default async function WikiPage({ params }: WikiPageProps) {
                   </Button>
                 </Link>
                 <DeleteWikiDialog slug={slug} title={page.frontmatter.title} />
-              </div>
             </div>
             <WikiViewer page={page} />
             <NextPrevLinks currentSlug={slug} allItems={allItems} />

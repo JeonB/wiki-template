@@ -23,14 +23,16 @@ export default function NextPrevLinks({ currentSlug, allItems }: NextPrevLinksPr
   }
 
   return (
-    <div className="mt-12 flex items-center justify-between border-t pt-8">
+    <div className="mt-12 flex items-center justify-between gap-4 border-t pt-8">
       {prevItem ? (
-        <Link href={`/${prevItem.slug}`}>
-          <Button variant="outline" className="flex items-center gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            <div className="text-left">
+        <Link href={`/${prevItem.slug}`} className="min-w-0 flex-1">
+          <Button variant="outline" className="h-auto w-full justify-start gap-2 py-2">
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1 text-left">
               <div className="text-xs text-muted-foreground">이전 문서</div>
-              <div className="font-medium">{prevItem.title}</div>
+              <div className="truncate font-medium" title={prevItem.title}>
+                {prevItem.title}
+              </div>
             </div>
           </Button>
         </Link>
@@ -38,13 +40,15 @@ export default function NextPrevLinks({ currentSlug, allItems }: NextPrevLinksPr
         <div />
       )}
       {nextItem ? (
-        <Link href={`/${nextItem.slug}`}>
-          <Button variant="outline" className="flex items-center gap-2">
-            <div className="text-right">
+        <Link href={`/${nextItem.slug}`} className="min-w-0 flex-1">
+          <Button variant="outline" className="h-auto w-full justify-end gap-2 py-2">
+            <div className="min-w-0 flex-1 text-right">
               <div className="text-xs text-muted-foreground">다음 문서</div>
-              <div className="font-medium">{nextItem.title}</div>
+              <div className="truncate font-medium" title={nextItem.title}>
+                {nextItem.title}
+              </div>
             </div>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 shrink-0" />
           </Button>
         </Link>
       ) : (

@@ -21,7 +21,7 @@ export default async function WikiListPage({ searchParams }: PageProps) {
     current === null ? allItems : allItems.filter((i) => (i.category ?? '') === current);
 
   return (
-    <div className="p-10">
+    <div className="px-4 py-6 sm:px-6 sm:py-8 lg:p-10">
       <CategoryFilter categories={categories} current={current} />
       <WikiList items={filtered} />
     </div>

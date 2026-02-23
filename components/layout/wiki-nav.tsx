@@ -19,7 +19,7 @@ export default function WikiNav({ items }: WikiNavProps) {
   return (
     <>
       <nav className="border-b bg-background">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3 sm:py-4">
           <div className="flex items-center gap-2">
             <MobileSidebarToggle items={items} />
             <Link
@@ -38,11 +38,12 @@ export default function WikiNav({ items }: WikiNavProps) {
               aria-label="검색"
             >
               <Search className="mr-2 h-4 w-4" />
-              검색
+              <span className="hidden sm:inline">검색</span>
             </Button>
             <Link href="/new">
               <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> 새 문서
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">새 문서</span>
               </Button>
             </Link>
             <ThemeToggle />

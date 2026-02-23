@@ -18,7 +18,7 @@ export default async function EditWikiPage({ params }: EditWikiPageProps) {
   }
 
   return (
-    <div className="p-10">
+    <div className="px-4 py-6 sm:px-6 sm:py-8 lg:p-10">
       <EditWikiForm page={page} onSubmit={updateWikiPageAction.bind(null, slug)} />
     </div>
   );

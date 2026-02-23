@@ -43,7 +43,7 @@ export default function WikiEditor({
           value={content}
           onChange={(e) => onContentChange(e.target.value)}
           placeholder="마크다운 형식으로 문서를 작성하세요"
-          className="min-h-[500px] font-mono text-sm"
+          className="min-h-[300px] font-mono text-sm sm:min-h-[400px] lg:min-h-[500px]"
         />
         <p className="mt-2 text-sm text-muted-foreground">
           마크다운 문법을 사용할 수 있습니다. 예: # 제목, **굵게**, `코드` 등
