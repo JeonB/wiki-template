@@ -1,0 +1,21 @@
+# 서버에서 문서 데이터 유지를 위해 반드시 content 볼륨 마운트를 사용하세요.
+# 호스트 경로는 서버 환경에 맞게 수정 (예: /opt/wiki/content).
+# 호스트 디렉터리 쓰기 권한: 컨테이너 내 nextjs(uid 1001)가 쓸 수 있어야 합니다.
+#   예) sudo chown 1001:1001 ./content  또는  chown 1001:1001 /opt/wiki/content
+
+services:
+  web:
+    image: wiki-template:latest
+    # 레지스트리 이미지 사용 시 예:
+    # image: registry.example.com/your-org/wiki-template:prd
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # 호스트의 content 디렉터리를 컨테이너 /app/content에 마운트 (데이터 유지)
+      - ./content:/app/content
+      # 온프레미스 서버 고정 경로 사용 시 예:
+      # - /opt/wiki/content:/app/content
+    environment:
+      - CONTENT_DIR=/app/content
+      - NODE_ENV=production

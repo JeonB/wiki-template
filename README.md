@@ -141,6 +141,15 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content wiki-template
 - `-v $(pwd)/content:/app/content`: 호스트의 `content/` 디렉터리를 컨테이너의 `/app/content`(기본 `CONTENT_DIR`)에 마운트합니다. 문서는 호스트에 저장되므로 컨테이너를 지워도 유지됩니다.
 - 컨테이너 내부에서 `nextjs`(uid 1001) 사용자가 해당 경로에 쓰기하므로, 호스트의 `content/` 디렉터리 권한이 너무 제한적이면 쓰기 실패할 수 있습니다. 필요 시 `chmod 755 content` 또는 `chown 1001:1001 content` 등으로 조정하세요.
 
+**Docker Compose 사용 시** (서버에서 compose로 띄우는 경우):
+
+프로젝트 루트의 `docker-compose.yml`을 사용하면 됩니다. content 볼륨 마운트와 재시작 정책이 이미 포함되어 있습니다. 호스트 경로만 서버에 맞게 수정한 뒤 `docker compose up -d`로 실행하세요.
+
+```bash
+# 이미지 빌드 후 (또는 레지스트리에서 pull 후)
+docker compose up -d
+```
+
 ### 온프레미스 서버에서 Docker 운영
 
 위 Docker 배포와 동일하게 구성하면 됩니다. 온프레미스에서도 다음만 지키면 됩니다.
