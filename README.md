@@ -105,14 +105,9 @@ wiki-template/
 
 ### 문서 저장 경로 변경
 
-`lib/config/wiki.config.ts` 파일에서 `contentDir`을 수정할 수 있습니다:
-
-```typescript
-export const wikiConfig = {
-  contentDir: join(cwd(), 'content'), // 여기를 수정
-  // ...
-};
-```
+- **환경 변수 (권장)**: 배포 시 `CONTENT_DIR`을 설정하면 문서 저장 경로를 덮어씁니다.  
+  예: `CONTENT_DIR=/app/content` (Docker), `CONTENT_DIR=/data/wiki-content` (VPS)
+- **코드 수정**: `lib/config/wiki.config.ts`에서 `contentDir` 기본값을 수정할 수도 있습니다.
 
 ## 배포
 
@@ -123,27 +118,55 @@ export const wikiConfig = {
 - **Vercel**: 지원하지 않음. Vercel 서버리스 함수는 읽기 전용 파일시스템을 사용하므로 문서 쓰기 동작이 불가능합니다.
 - **권장 플랫폼**: Docker, VPS, Railway, Render 등 파일시스템 쓰기를 지원하는 환경
 
+### 데이터 유지 (content 경로·쓰기 권한·볼륨)
+
+문서가 서버 재시작 후에도 유지되려면 다음을 지켜야 합니다.
+
+| 항목 | 설명 |
+|------|------|
+| **저장 경로** | 기본값은 프로젝트 루트의 `content/`. 배포 시 `CONTENT_DIR` 환경 변수로 변경 가능 (예: Docker 내 `/app/content`). |
+| **쓰기 권한** | 앱이 실행되는 사용자(또는 프로세스)가 해당 경로에 **쓰기 권한**이 있어야 합니다. Docker 이미지는 `content/`에 대해 `nextjs` 사용자 소유로 설정되어 있습니다. |
+| **볼륨 마운트** | Docker 사용 시 반드시 **볼륨 마운트**로 호스트의 디렉터리를 컨테이너의 content 경로에 연결하세요. 마운트하지 않으면 컨테이너만의 파일시스템에 저장되어 재시작 시 사라집니다. |
+
 ### Docker 배포 (권장)
 
 ```bash
 # Docker 이미지 빌드
 docker build -t wiki-template .
 
-# 컨테이너 실행 (content/ 영속성을 위해 볼륨 마운트)
+# 컨테이너 실행 (볼륨 마운트로 데이터 유지)
 docker run -p 3000:3000 -v $(pwd)/content:/app/content wiki-template
 ```
 
-- `-v $(pwd)/content:/app/content`: 호스트의 `content/` 디렉터리를 컨테이너에 마운트하여 문서가 컨테이너 재시작 후에도 유지되도록 합니다.
+- `-v $(pwd)/content:/app/content`: 호스트의 `content/` 디렉터리를 컨테이너의 `/app/content`(기본 `CONTENT_DIR`)에 마운트합니다. 문서는 호스트에 저장되므로 컨테이너를 지워도 유지됩니다.
+- 컨테이너 내부에서 `nextjs`(uid 1001) 사용자가 해당 경로에 쓰기하므로, 호스트의 `content/` 디렉터리 권한이 너무 제한적이면 쓰기 실패할 수 있습니다. 필요 시 `chmod 755 content` 또는 `chown 1001:1001 content` 등으로 조정하세요.
+
+**Docker Compose 사용 시** (서버에서 compose로 띄우는 경우):
+
+프로젝트 루트의 `docker-compose.yml`을 사용하면 됩니다. content 볼륨 마운트와 재시작 정책이 이미 포함되어 있습니다. 호스트 경로만 서버에 맞게 수정한 뒤 `docker compose up -d`로 실행하세요.
+
+```bash
+# 이미지 빌드 후 (또는 레지스트리에서 pull 후)
+docker compose up -d
+```
+
+### 온프레미스 서버에서 Docker 운영
+
+위 Docker 배포와 동일하게 구성하면 됩니다. 온프레미스에서도 다음만 지키면 됩니다.
+
+- **볼륨 마운트**: 반드시 `-v 호스트경로:/app/content`로 실행해 문서가 호스트 디스크에 저장되도록 하세요. 예: `-v /opt/wiki/content:/app/content`
+- **쓰기 권한**: 호스트의 마운트 경로(`/opt/wiki/content` 등)에 컨테이너 내 nextjs(uid 1001)가 쓸 수 있어야 합니다. `chown 1001:1001 /opt/wiki/content` 또는 `chmod 777`(보안상 비권장) 등으로 맞춰 주세요.
+- **재시작 정책**: 서버 재부팅 시 컨테이너가 다시 떠야 하면 `docker run`에 `--restart unless-stopped`를 붙이거나, docker-compose / Kubernetes 등으로 재시작 정책을 설정하면 됩니다.
 
 ### 기타 배포 옵션
 
-- **Railway, Render**: Dockerfile 기반 배포 후 Persistent Disk/Volume에 `content/` 마운트
-- **VPS (AWS EC2, GCP, DigitalOcean 등)**: Docker 또는 `pnpm build && pnpm start` 직접 실행
+- **Railway, Render**: Dockerfile 기반 배포 후 Persistent Disk/Volume을 **`/app/content`에 마운트** (또는 원하는 경로에 마운트한 뒤 `CONTENT_DIR`로 지정).
+- **VPS (AWS EC2, GCP, DigitalOcean 등)**: Docker 사용 시 위와 동일하게 볼륨 마운트. 직접 실행 시 `pnpm build && pnpm start`로 루트의 `content/`에 쓰기 권한만 확인하면 됩니다.
 
 ### 주의사항
 
-- `content/` 디렉토리는 Git에 포함되어야 합니다 (문서 파일 저장)
-- 배포 환경에서도 `content/` 디렉토리에 쓰기 권한이 필요합니다
+- `content/` 디렉토리는 Git에 포함되어야 합니다 (문서 파일 저장).
+- 배포 환경에서 **content 경로에 쓰기 권한**이 있어야 하며, Docker는 **반드시 볼륨 마운트**로 같은 경로를 유지해야 데이터가 보존됩니다.
 
 ## 사용자 정의
 

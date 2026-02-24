@@ -1,0 +1,77 @@
+name: Deploy to Production Environment
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  REGISTRY: registry.inphrcare.com
+  IMAGE_NAME: inphr-intro/web
+  TAG: prd
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Show build artifacts
+        run: |
+          ls -al .next
+          ls -al .next/standalone || true
+
+      # 온프레미스 서버에서 컨테이너 실행 시 참고
+      - name: Deploy instructions (on-prem)
+        run: |
+          echo "## 컨테이너 실행 시 필수 사항" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **볼륨 마운트**: 문서가 호스트에 저장되도록 반드시 \`-v 호스트경로:/app/content\` 를 사용하세요." >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   docker run -d -p 3000:3000 --restart unless-stopped \\" >> $GITHUB_STEP_SUMMARY
+          echo "     -v /opt/wiki/content:/app/content \\" >> $GITHUB_STEP_SUMMARY
+          echo "     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. **쓰기 권한**: 호스트의 content 경로에 컨테이너 내 nextjs(uid 1001)가 쓸 수 있어야 합니다." >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   sudo mkdir -p /opt/wiki/content" >> $GITHUB_STEP_SUMMARY
+          echo "   sudo chown 1001:1001 /opt/wiki/content" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY

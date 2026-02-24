@@ -52,5 +52,7 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# 문서 저장 경로 (볼륨 마운트 시 이 경로에 마운트하면 데이터 유지)
+ENV CONTENT_DIR=/app/content
 
 CMD ["node", "server.js"]
