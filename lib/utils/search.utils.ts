@@ -3,7 +3,7 @@ import type { WikiListItem } from '@/lib/types/wiki.types';
 /**
  * 검색어를 정규화 (소문자 변환, 공백 제거)
  */
-export function normalizeSearchQuery(query: string): string {
+function normalizeSearchQuery(query: string): string {
   return query.toLowerCase().trim();
 }
 

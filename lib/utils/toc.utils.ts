@@ -3,7 +3,7 @@ import type { TocItem } from '@/lib/types/wiki.types';
 /**
  * 텍스트를 URL-safe한 ID로 변환
  */
-export function slugify(text: string): string {
+function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()

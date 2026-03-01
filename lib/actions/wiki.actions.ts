@@ -93,7 +93,7 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
 /**
  * Wiki 페이지 생성
  */
-export async function createWikiPage(
+async function createWikiPage(
   slug: string,
   title: string,
   content: string,
@@ -135,7 +135,7 @@ export async function createWikiPage(
 /**
  * Wiki 페이지 업데이트
  */
-export async function updateWikiPage(
+async function updateWikiPage(
   slug: string,
   updates: {
     title?: string;
@@ -272,7 +272,7 @@ export async function createWikiPageAction(formData: FormData): Promise<void> {
 /**
  * FormData에서 Wiki 페이지 생성
  */
-export async function createWikiPageFromFormData(formData: FormData): Promise<void> {
+async function createWikiPageFromFormData(formData: FormData): Promise<void> {
   const slug = ((formData.get('slug') as string) ?? '')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
@@ -301,7 +301,7 @@ export async function updateWikiPageAction(slug: string, formData: FormData): Pr
 /**
  * FormData에서 Wiki 페이지 업데이트
  */
-export async function updateWikiPageFromFormData(
+async function updateWikiPageFromFormData(
   slug: string,
   formData: FormData,
 ): Promise<void> {

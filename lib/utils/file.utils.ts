@@ -12,7 +12,7 @@ export function filenameToSlug(filename: string): string {
 /**
  * 슬러그를 파일명으로 변환
  */
-export function slugToFilename(slug: string): string {
+function slugToFilename(slug: string): string {
   return `${slug}.md`;
 }
 
