@@ -12,6 +12,27 @@ import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.uti
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
 
+function isMarkdownFile(filename: string): boolean {
+  return wikiConfig.allowedExtensions.some((extension) => filename.endsWith(extension));
+}
+
+async function getExistingWikiFilePath(slug: string): Promise<string | null> {
+  const canonicalPath = getFilePath(slug);
+
+  if (existsSync(canonicalPath)) {
+    return canonicalPath;
+  }
+
+  if (!existsSync(wikiConfig.contentDir)) {
+    return null;
+  }
+
+  const files = await readdir(wikiConfig.contentDir);
+  const existingFile = files.find((file) => isMarkdownFile(file) && filenameToSlug(file) === slug);
+
+  return existingFile ? join(wikiConfig.contentDir, existingFile) : null;
+}
+
 /**
  * Wiki 페이지 목록 조회
  */
@@ -22,7 +43,7 @@ export async function getWikiList(): Promise<WikiListItem[]> {
     }
 
     const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+    const markdownFiles = files.filter(isMarkdownFile);
 
     const items: WikiListItem[] = [];
 
@@ -74,9 +95,9 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await getExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
 
@@ -104,11 +125,13 @@ async function createWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const existingFilePath = await getExistingWikiFilePath(slug);
 
-    if (existsSync(filePath)) {
+    if (existingFilePath) {
       throw new Error('Page already exists');
     }
+
+    const filePath = getFilePath(slug);
 
     const page: WikiPage = {
       slug,
@@ -148,9 +171,9 @@ async function updateWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await getExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
@@ -187,9 +210,9 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await getExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
@@ -216,7 +239,7 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
     }
 
     const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const markdownFiles = files.filter(isMarkdownFile);
     const results: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
