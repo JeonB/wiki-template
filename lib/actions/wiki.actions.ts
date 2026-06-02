@@ -264,15 +264,14 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
  * Wiki 페이지 생성 액션 (redirect 포함)
  */
 export async function createWikiPageAction(formData: FormData): Promise<void> {
-  await createWikiPageFromFormData(formData);
-  const slug = (formData.get('slug') as string) ?? '';
+  const slug = await createWikiPageFromFormData(formData);
   redirect(`/${slug}`);
 }
 
 /**
  * FormData에서 Wiki 페이지 생성
  */
-async function createWikiPageFromFormData(formData: FormData): Promise<void> {
+async function createWikiPageFromFormData(formData: FormData): Promise<string> {
   const slug = ((formData.get('slug') as string) ?? '')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
@@ -288,6 +287,7 @@ async function createWikiPageFromFormData(formData: FormData): Promise<void> {
     category,
   });
   revalidatePath('/', 'layout');
+  return slug;
 }
 
 /**
