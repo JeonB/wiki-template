@@ -6,7 +6,7 @@ import { wikiConfig } from '@/lib/config/wiki.config';
  */
 export function filenameToSlug(filename: string): string {
   const name = basename(filename, extname(filename));
-  return name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return canonicalizeSlug(name);
 }
 
 /**
@@ -27,7 +27,7 @@ export function getFilePath(slug: string): string {
  * 슬러그가 유효한지 확인
  */
 export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9-]+$/.test(slug) && slug.length > 0;
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
 }
 
 /**
@@ -41,4 +41,11 @@ export function normalizeSlug(input: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-');
+}
+
+/**
+ * 저장/조회에 사용할 최종 슬러그로 정규화합니다.
+ */
+export function canonicalizeSlug(input: string): string {
+  return normalizeSlug(input).replace(/^-+|-+$/g, '');
 }

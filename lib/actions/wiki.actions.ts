@@ -7,10 +7,37 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import matter from 'gray-matter';
 import { wikiConfig } from '@/lib/config/wiki.config';
-import { getFilePath, filenameToSlug, isValidSlug } from '@/lib/utils/file.utils';
+import {
+  canonicalizeSlug,
+  getFilePath,
+  filenameToSlug,
+  isValidSlug,
+} from '@/lib/utils/file.utils';
 import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
+
+function isMarkdownFile(file: string): boolean {
+  return file.endsWith('.md') || file.endsWith('.markdown');
+}
+
+async function getMarkdownFiles(): Promise<string[]> {
+  const files = await readdir(wikiConfig.contentDir);
+  return files.filter(isMarkdownFile).sort((a, b) => a.localeCompare(b));
+}
+
+async function resolveExistingWikiFilePath(slug: string): Promise<string | null> {
+  const exactPath = getFilePath(slug);
+
+  if (existsSync(exactPath)) {
+    return exactPath;
+  }
+
+  const markdownFiles = await getMarkdownFiles();
+  const matchingFile = markdownFiles.find((file) => filenameToSlug(file) === slug);
+
+  return matchingFile ? join(wikiConfig.contentDir, matchingFile) : null;
+}
 
 /**
  * Wiki 페이지 목록 조회
@@ -21,8 +48,7 @@ export async function getWikiList(): Promise<WikiListItem[]> {
       return [];
     }
 
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+    const markdownFiles = await getMarkdownFiles();
 
     const items: WikiListItem[] = [];
 
@@ -74,9 +100,9 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
 
@@ -104,11 +130,13 @@ async function createWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const existingFilePath = await resolveExistingWikiFilePath(slug);
 
-    if (existsSync(filePath)) {
+    if (existingFilePath) {
       throw new Error('Page already exists');
     }
+
+    const filePath = getFilePath(slug);
 
     const page: WikiPage = {
       slug,
@@ -148,9 +176,9 @@ async function updateWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
@@ -187,9 +215,9 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveExistingWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
@@ -215,8 +243,7 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
       return [];
     }
 
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const markdownFiles = await getMarkdownFiles();
     const results: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
@@ -264,18 +291,15 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
  * Wiki 페이지 생성 액션 (redirect 포함)
  */
 export async function createWikiPageAction(formData: FormData): Promise<void> {
-  await createWikiPageFromFormData(formData);
-  const slug = (formData.get('slug') as string) ?? '';
+  const slug = await createWikiPageFromFormData(formData);
   redirect(`/${slug}`);
 }
 
 /**
  * FormData에서 Wiki 페이지 생성
  */
-async function createWikiPageFromFormData(formData: FormData): Promise<void> {
-  const slug = ((formData.get('slug') as string) ?? '')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+async function createWikiPageFromFormData(formData: FormData): Promise<string> {
+  const slug = canonicalizeSlug((formData.get('slug') as string) ?? '');
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
   const category = (formData.get('category') as string) || undefined;
@@ -288,6 +312,7 @@ async function createWikiPageFromFormData(formData: FormData): Promise<void> {
     category,
   });
   revalidatePath('/', 'layout');
+  return slug;
 }
 
 /**
