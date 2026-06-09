@@ -31,6 +31,13 @@ export function isValidSlug(slug: string): boolean {
 }
 
 /**
+ * 저장 시 사용할 슬러그로 정규화
+ */
+export function normalizeSavedSlug(input: string): string {
+  return normalizeSlug(input).replace(/^-+/, '').replace(/-+$/, '');
+}
+
+/**
  * 사용자 입력을 슬러그 형식으로 정규화 (입력 중 실시간 적용용)
  * 영문 소문자, 숫자, 하이픈만 허용하고 연속된 하이픈을 하나로 통합.
  * 앞뒤 하이픈은 입력 시 제거하지 않아, 'getting-' 입력 중 하이픈이 사라지지 않도록 함.
