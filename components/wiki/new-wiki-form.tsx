@@ -6,7 +6,7 @@ import WikiEditor from '@/components/wiki/wiki-editor';
 import WikiFormFields from '@/components/wiki/wiki-form-fields';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { normalizeSlug } from '@/lib/utils/file.utils';
+import { normalizeSlug } from '@/lib/utils/slug.utils';
 
 interface NewWikiFormProps {
   onSubmit: (formData: FormData) => Promise<void>;

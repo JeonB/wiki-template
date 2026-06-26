@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, FileText, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UNCATEGORIZED_LABEL } from '@/lib/config/wiki.config';
+import { UNCATEGORIZED_LABEL } from '@/lib/config/wiki.constants';
 import type { WikiListItem } from '@/lib/types/wiki.types';
 
 interface WikiSidebarProps {

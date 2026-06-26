@@ -1,8 +1,8 @@
 import { join } from 'path';
 import { cwd } from 'process';
+import { UNCATEGORIZED_LABEL, WIKI_MARKDOWN_EXTENSIONS } from '@/lib/config/wiki.constants';
 
-/** 빈 카테고리 표시 라벨 (일관성 유지용) */
-export const UNCATEGORIZED_LABEL = '미분류';
+export { UNCATEGORIZED_LABEL };
 
 /**
  * 문서 저장 경로. 배포 시 CONTENT_DIR 환경 변수로 덮어쓸 수 있음.
@@ -12,7 +12,7 @@ const contentDir = process.env.CONTENT_DIR ?? join(cwd(), 'content');
 
 export const wikiConfig = {
   contentDir,
-  allowedExtensions: ['.md', '.markdown'] as const,
+  allowedExtensions: WIKI_MARKDOWN_EXTENSIONS,
   defaultFrontmatter: {
     title: 'Untitled',
     category: '',
