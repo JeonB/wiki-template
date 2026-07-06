@@ -18,6 +18,7 @@ export interface WikiPage {
   slug: string;
   frontmatter: WikiFrontmatter;
   content: string;
+  revision?: string;
   html?: string;
   toc?: TocItem[];
 }

@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { readFile, writeFile, unlink, readdir } from 'fs/promises';
-import { join } from 'path';
+import { createHash } from 'crypto';
+import { extname, join } from 'path';
 import { existsSync } from 'fs';
 import matter from 'gray-matter';
 import { wikiConfig } from '@/lib/config/wiki.config';
@@ -11,6 +12,64 @@ import { getFilePath, filenameToSlug, isValidSlug } from '@/lib/utils/file.utils
 import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
+
+const STALE_PAGE_ERROR_MESSAGE = '문서가 열린 뒤 수정되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.';
+const MISSING_REVISION_ERROR_MESSAGE = '문서 수정 정보가 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.';
+const wikiPageLocks = new Map<string, Promise<void>>();
+
+function isMarkdownFile(filename: string): boolean {
+  const allowedExtensions: readonly string[] = wikiConfig.allowedExtensions;
+  return allowedExtensions.includes(extname(filename).toLowerCase());
+}
+
+function getContentRevision(content: string): string {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+async function resolveWikiFilePath(slug: string): Promise<string | null> {
+  const normalizedPath = getFilePath(slug);
+  if (existsSync(normalizedPath)) {
+    return normalizedPath;
+  }
+
+  if (!existsSync(wikiConfig.contentDir)) {
+    return null;
+  }
+
+  const files = await readdir(wikiConfig.contentDir);
+  const matchedFile = files.find((file) => isMarkdownFile(file) && filenameToSlug(file) === slug);
+  return matchedFile ? join(wikiConfig.contentDir, matchedFile) : null;
+}
+
+async function withWikiPageLock<T>(slug: string, task: () => Promise<T>): Promise<T> {
+  const previousLock = wikiPageLocks.get(slug) ?? Promise.resolve();
+  let releaseCurrentLock: () => void = () => {};
+  const currentLock = new Promise<void>((resolve) => {
+    releaseCurrentLock = resolve;
+  });
+  const queuedLock = previousLock.catch(() => undefined).then(() => currentLock);
+  wikiPageLocks.set(slug, queuedLock);
+
+  await previousLock;
+
+  try {
+    return await task();
+  } finally {
+    releaseCurrentLock();
+    if (wikiPageLocks.get(slug) === queuedLock) {
+      wikiPageLocks.delete(slug);
+    }
+  }
+}
+
+function rethrowUserFacingUpdateError(error: unknown): void {
+  if (
+    error instanceof Error &&
+    (error.message === STALE_PAGE_ERROR_MESSAGE || error.message === MISSING_REVISION_ERROR_MESSAGE)
+  ) {
+    throw error;
+  }
+}
 
 /**
  * Wiki 페이지 목록 조회
@@ -22,7 +81,7 @@ export async function getWikiList(): Promise<WikiListItem[]> {
     }
 
     const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+    const markdownFiles = files.filter(isMarkdownFile);
 
     const items: WikiListItem[] = [];
 
@@ -74,14 +133,18 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
 
     const content = await readFile(filePath, 'utf-8');
-    return await parseMarkdownFile(content, slug);
+    const page = await parseMarkdownFile(content, slug);
+    return {
+      ...page,
+      revision: getContentRevision(content),
+    };
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error getting wiki page:', error);
@@ -105,8 +168,9 @@ async function createWikiPage(
     }
 
     const filePath = getFilePath(slug);
+    const existingFilePath = await resolveWikiFilePath(slug);
 
-    if (existsSync(filePath)) {
+    if (existingFilePath) {
       throw new Error('Page already exists');
     }
 
@@ -123,7 +187,7 @@ async function createWikiPage(
     };
 
     const markdown = serializeToMarkdown(page);
-    await writeFile(filePath, markdown, 'utf-8');
+    await writeFile(filePath, markdown, { encoding: 'utf-8', flag: 'wx' });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error creating wiki page:', error);
@@ -141,6 +205,7 @@ async function updateWikiPage(
     title?: string;
     content?: string;
     frontmatter?: Partial<WikiPage['frontmatter']>;
+    expectedRevision: string;
   },
 ): Promise<void> {
   try {
@@ -148,13 +213,21 @@ async function updateWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    if (!updates.expectedRevision) {
+      throw new Error(MISSING_REVISION_ERROR_MESSAGE);
+    }
 
-    if (!existsSync(filePath)) {
+    const filePath = await resolveWikiFilePath(slug);
+
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
     const existingContent = await readFile(filePath, 'utf-8');
+    if (getContentRevision(existingContent) !== updates.expectedRevision) {
+      throw new Error(STALE_PAGE_ERROR_MESSAGE);
+    }
+
     const existingPage = await parseMarkdownFile(existingContent, slug);
 
     const updatedPage: WikiPage = {
@@ -171,6 +244,7 @@ async function updateWikiPage(
     const markdown = serializeToMarkdown(updatedPage);
     await writeFile(filePath, markdown, 'utf-8');
   } catch (error) {
+    rethrowUserFacingUpdateError(error);
     if (process.env.NODE_ENV === 'development') {
       console.error('Error updating wiki page:', error);
     }
@@ -187,9 +261,9 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
@@ -216,7 +290,7 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
     }
 
     const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const markdownFiles = files.filter(isMarkdownFile);
     const results: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
@@ -264,15 +338,14 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
  * Wiki 페이지 생성 액션 (redirect 포함)
  */
 export async function createWikiPageAction(formData: FormData): Promise<void> {
-  await createWikiPageFromFormData(formData);
-  const slug = (formData.get('slug') as string) ?? '';
+  const slug = await createWikiPageFromFormData(formData);
   redirect(`/${slug}`);
 }
 
 /**
  * FormData에서 Wiki 페이지 생성
  */
-async function createWikiPageFromFormData(formData: FormData): Promise<void> {
+async function createWikiPageFromFormData(formData: FormData): Promise<string> {
   const slug = ((formData.get('slug') as string) ?? '')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
@@ -284,10 +357,13 @@ async function createWikiPageFromFormData(formData: FormData): Promise<void> {
     throw new Error('슬러그, 제목, 내용을 모두 입력해주세요');
   }
 
-  await createWikiPage(slug, title, content, {
-    category,
+  await withWikiPageLock(slug, async () => {
+    await createWikiPage(slug, title, content, {
+      category,
+    });
   });
   revalidatePath('/', 'layout');
+  return slug;
 }
 
 /**
@@ -308,17 +384,21 @@ async function updateWikiPageFromFormData(
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
   const category = (formData.get('category') as string) || undefined;
+  const revision = (formData.get('revision') as string) || '';
 
   if (!title || !content) {
     throw new Error('제목과 내용을 입력해주세요');
   }
 
-  await updateWikiPage(slug, {
-    title,
-    content,
-    frontmatter: {
-      category,
-    },
+  await withWikiPageLock(slug, async () => {
+    await updateWikiPage(slug, {
+      title,
+      content,
+      expectedRevision: revision,
+      frontmatter: {
+        category,
+      },
+    });
   });
   revalidatePath('/', 'layout');
 }
