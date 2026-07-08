@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { readFile, writeFile, unlink, readdir } from 'fs/promises';
-import { join } from 'path';
+import { readFile, writeFile, unlink, readdir, rename, rm } from 'fs/promises';
+import { createHash, randomUUID } from 'crypto';
+import { extname, join } from 'path';
 import { existsSync } from 'fs';
 import matter from 'gray-matter';
 import { wikiConfig } from '@/lib/config/wiki.config';
@@ -12,25 +13,141 @@ import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.uti
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
 
+const STALE_PAGE_ERROR_MESSAGE = '문서가 열린 뒤 수정되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.';
+const MISSING_REVISION_ERROR_MESSAGE = '문서 수정 정보가 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.';
+const wikiPageLocks = new Map<string, Promise<void>>();
+
+interface WikiFileEntry {
+  filename: string;
+  filePath: string;
+  slug: string;
+  rank: number;
+}
+
+function isMarkdownFile(filename: string): boolean {
+  const allowedExtensions: readonly string[] = wikiConfig.allowedExtensions;
+  return allowedExtensions.includes(extname(filename).toLowerCase());
+}
+
+function getContentRevision(content: string): string {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function getFileRank(filename: string, slug: string): number {
+  if (filename === `${slug}.md`) return 0;
+  if (filename === `${slug}.markdown`) return 1;
+
+  const lowerFilename = filename.toLowerCase();
+  if (lowerFilename === `${slug}.md`) return 2;
+  if (lowerFilename === `${slug}.markdown`) return 3;
+
+  return 4;
+}
+
+async function getWikiFileEntries(): Promise<WikiFileEntry[]> {
+  if (!existsSync(wikiConfig.contentDir)) {
+    return [];
+  }
+
+  const files = await readdir(wikiConfig.contentDir);
+  return files
+    .filter(isMarkdownFile)
+    .map((filename) => {
+      const slug = filenameToSlug(filename);
+      return {
+        filename,
+        filePath: join(wikiConfig.contentDir, filename),
+        slug,
+        rank: getFileRank(filename, slug),
+      };
+    })
+    .filter((entry) => isValidSlug(entry.slug))
+    .sort((a, b) => {
+      if (a.slug !== b.slug) return a.slug.localeCompare(b.slug);
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.filename.localeCompare(b.filename);
+    });
+}
+
+async function getUniqueWikiFileEntries(): Promise<WikiFileEntry[]> {
+  const entries = await getWikiFileEntries();
+  const uniqueEntries = new Map<string, WikiFileEntry>();
+
+  for (const entry of entries) {
+    if (!uniqueEntries.has(entry.slug)) {
+      uniqueEntries.set(entry.slug, entry);
+    }
+  }
+
+  return [...uniqueEntries.values()];
+}
+
+async function resolveWikiFilePath(slug: string): Promise<string | null> {
+  const entry = (await getUniqueWikiFileEntries()).find((candidate) => candidate.slug === slug);
+  return entry?.filePath ?? null;
+}
+
+async function resolveWikiFilePaths(slug: string): Promise<string[]> {
+  return (await getWikiFileEntries())
+    .filter((entry) => entry.slug === slug)
+    .map((entry) => entry.filePath);
+}
+
+async function writeWikiFileAtomically(filePath: string, content: string): Promise<void> {
+  const tempFilePath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+
+  try {
+    await writeFile(tempFilePath, content, { encoding: 'utf-8', flag: 'wx' });
+    await rename(tempFilePath, filePath);
+  } catch (error) {
+    await rm(tempFilePath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+async function withWikiPageLock<T>(slug: string, task: () => Promise<T>): Promise<T> {
+  const previousLock = wikiPageLocks.get(slug) ?? Promise.resolve();
+  let releaseCurrentLock: () => void = () => {};
+  const currentLock = new Promise<void>((resolve) => {
+    releaseCurrentLock = resolve;
+  });
+  const queuedLock = previousLock.catch(() => undefined).then(() => currentLock);
+  wikiPageLocks.set(slug, queuedLock);
+
+  await previousLock;
+
+  try {
+    return await task();
+  } finally {
+    releaseCurrentLock();
+    if (wikiPageLocks.get(slug) === queuedLock) {
+      wikiPageLocks.delete(slug);
+    }
+  }
+}
+
+function rethrowUserFacingUpdateError(error: unknown): void {
+  if (
+    error instanceof Error &&
+    (error.message === STALE_PAGE_ERROR_MESSAGE || error.message === MISSING_REVISION_ERROR_MESSAGE)
+  ) {
+    throw error;
+  }
+}
+
 /**
  * Wiki 페이지 목록 조회
  */
 export async function getWikiList(): Promise<WikiListItem[]> {
   try {
-    if (!existsSync(wikiConfig.contentDir)) {
-      return [];
-    }
-
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+    const markdownFiles = await getUniqueWikiFileEntries();
 
     const items: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
       try {
-        const filePath = join(wikiConfig.contentDir, file);
-        const content = await readFile(filePath, 'utf-8');
-        const slug = filenameToSlug(file);
+        const content = await readFile(file.filePath, 'utf-8');
+        const slug = file.slug;
         const parsed = await parseMarkdownFile(content, slug);
 
         items.push({
@@ -43,7 +160,7 @@ export async function getWikiList(): Promise<WikiListItem[]> {
         });
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error(`Error reading file ${file}:`, error);
+          console.error(`Error reading file ${file.filename}:`, error);
         }
         // 개별 파일 오류는 무시하고 계속 진행
       }
@@ -74,14 +191,18 @@ export async function getWikiPage(slug: string): Promise<WikiPage | null> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePath = await resolveWikiFilePath(slug);
 
-    if (!existsSync(filePath)) {
+    if (!filePath) {
       return null;
     }
 
     const content = await readFile(filePath, 'utf-8');
-    return await parseMarkdownFile(content, slug);
+    const page = await parseMarkdownFile(content, slug);
+    return {
+      ...page,
+      revision: getContentRevision(content),
+    };
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error getting wiki page:', error);
@@ -105,8 +226,9 @@ async function createWikiPage(
     }
 
     const filePath = getFilePath(slug);
+    const existingFilePath = await resolveWikiFilePath(slug);
 
-    if (existsSync(filePath)) {
+    if (existingFilePath) {
       throw new Error('Page already exists');
     }
 
@@ -123,7 +245,7 @@ async function createWikiPage(
     };
 
     const markdown = serializeToMarkdown(page);
-    await writeFile(filePath, markdown, 'utf-8');
+    await writeFile(filePath, markdown, { encoding: 'utf-8', flag: 'wx' });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error creating wiki page:', error);
@@ -141,6 +263,7 @@ async function updateWikiPage(
     title?: string;
     content?: string;
     frontmatter?: Partial<WikiPage['frontmatter']>;
+    expectedRevision: string;
   },
 ): Promise<void> {
   try {
@@ -148,13 +271,21 @@ async function updateWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    if (!updates.expectedRevision) {
+      throw new Error(MISSING_REVISION_ERROR_MESSAGE);
+    }
 
-    if (!existsSync(filePath)) {
+    const filePath = await resolveWikiFilePath(slug);
+
+    if (!filePath) {
       throw new Error('Page not found');
     }
 
     const existingContent = await readFile(filePath, 'utf-8');
+    if (getContentRevision(existingContent) !== updates.expectedRevision) {
+      throw new Error(STALE_PAGE_ERROR_MESSAGE);
+    }
+
     const existingPage = await parseMarkdownFile(existingContent, slug);
 
     const updatedPage: WikiPage = {
@@ -169,8 +300,9 @@ async function updateWikiPage(
     };
 
     const markdown = serializeToMarkdown(updatedPage);
-    await writeFile(filePath, markdown, 'utf-8');
+    await writeWikiFileAtomically(filePath, markdown);
   } catch (error) {
+    rethrowUserFacingUpdateError(error);
     if (process.env.NODE_ENV === 'development') {
       console.error('Error updating wiki page:', error);
     }
@@ -187,13 +319,13 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
+    const filePaths = await resolveWikiFilePaths(slug);
 
-    if (!existsSync(filePath)) {
+    if (filePaths.length === 0) {
       throw new Error('Page not found');
     }
 
-    await unlink(filePath);
+    await Promise.all(filePaths.map((filePath) => unlink(filePath)));
     revalidatePath('/', 'layout');
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -211,20 +343,14 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
     const q = query.trim();
     if (!q) return [];
 
-    if (!existsSync(wikiConfig.contentDir)) {
-      return [];
-    }
-
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const markdownFiles = await getUniqueWikiFileEntries();
     const results: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
       try {
-        const filePath = join(wikiConfig.contentDir, file);
-        const raw = await readFile(filePath, 'utf-8');
+        const raw = await readFile(file.filePath, 'utf-8');
         const { data, content: body } = matter(raw);
-        const slug = filenameToSlug(file);
+        const slug = file.slug;
 
         const item: WikiListItem = {
           slug,
@@ -264,15 +390,14 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
  * Wiki 페이지 생성 액션 (redirect 포함)
  */
 export async function createWikiPageAction(formData: FormData): Promise<void> {
-  await createWikiPageFromFormData(formData);
-  const slug = (formData.get('slug') as string) ?? '';
+  const slug = await createWikiPageFromFormData(formData);
   redirect(`/${slug}`);
 }
 
 /**
  * FormData에서 Wiki 페이지 생성
  */
-async function createWikiPageFromFormData(formData: FormData): Promise<void> {
+async function createWikiPageFromFormData(formData: FormData): Promise<string> {
   const slug = ((formData.get('slug') as string) ?? '')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
@@ -284,10 +409,13 @@ async function createWikiPageFromFormData(formData: FormData): Promise<void> {
     throw new Error('슬러그, 제목, 내용을 모두 입력해주세요');
   }
 
-  await createWikiPage(slug, title, content, {
-    category,
+  await withWikiPageLock(slug, async () => {
+    await createWikiPage(slug, title, content, {
+      category,
+    });
   });
   revalidatePath('/', 'layout');
+  return slug;
 }
 
 /**
@@ -308,17 +436,21 @@ async function updateWikiPageFromFormData(
   const title = formData.get('title') as string;
   const content = formData.get('content') as string;
   const category = (formData.get('category') as string) || undefined;
+  const revision = (formData.get('revision') as string) || '';
 
   if (!title || !content) {
     throw new Error('제목과 내용을 입력해주세요');
   }
 
-  await updateWikiPage(slug, {
-    title,
-    content,
-    frontmatter: {
-      category,
-    },
+  await withWikiPageLock(slug, async () => {
+    await updateWikiPage(slug, {
+      title,
+      content,
+      expectedRevision: revision,
+      frontmatter: {
+        category,
+      },
+    });
   });
   revalidatePath('/', 'layout');
 }
