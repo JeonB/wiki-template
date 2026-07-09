@@ -10,6 +10,21 @@ export function filenameToSlug(filename: string): string {
 }
 
 /**
+ * 지원하는 마크다운 파일인지 확인
+ */
+export function isMarkdownFile(filename: string): boolean {
+  const extension = extname(filename).toLowerCase();
+  return wikiConfig.allowedExtensions.some((allowedExtension) => allowedExtension === extension);
+}
+
+/**
+ * 파일명이 공개 슬러그와 같은 문서를 가리키는지 확인
+ */
+export function filenameMatchesSlug(filename: string, slug: string): boolean {
+  return filenameToSlug(filename) === slug;
+}
+
+/**
  * 슬러그를 파일명으로 변환
  */
 function slugToFilename(slug: string): string {
