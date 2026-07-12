@@ -45,6 +45,7 @@ export default function EditWikiForm({ page, onSubmit }: EditWikiFormProps) {
       <WikiFormFields category={category} onCategoryChange={setCategory} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="content" value={content} />
+      <input type="hidden" name="expectedUpdatedAt" value={page.frontmatter.updatedAt ?? ''} />
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>
           취소
