@@ -6,10 +6,10 @@ import WikiEditor from '@/components/wiki/wiki-editor';
 import WikiFormFields from '@/components/wiki/wiki-form-fields';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { normalizeSlug } from '@/lib/utils/file.utils';
+import { normalizeSlug } from '@/lib/utils/slug.utils';
 
 interface NewWikiFormProps {
-  onSubmit: (formData: FormData) => Promise<void>;
+  onSubmit: (formData: FormData) => Promise<string>;
 }
 
 export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
@@ -27,7 +27,9 @@ export default function NewWikiForm({ onSubmit }: NewWikiFormProps) {
     startTransition(async () => {
       const formData = new FormData(e.currentTarget);
       try {
-        await onSubmit(formData);
+        const createdSlug = await onSubmit(formData);
+        router.push(`/${createdSlug}`);
+        router.refresh();
       } catch (error) {
         unstable_rethrow(error);
         setError(error instanceof Error ? error.message : '문서 생성에 실패했습니다.');

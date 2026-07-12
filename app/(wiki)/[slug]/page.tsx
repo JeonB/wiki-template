@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getWikiPage, getWikiList } from '@/lib/actions/wiki.actions';
 import WikiViewer from '@/components/wiki/wiki-viewer';
@@ -10,6 +10,7 @@ import NextPrevLinks from '@/components/wiki/next-prev-links';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import DeleteWikiDialog from '@/components/wiki/delete-wiki-dialog';
+import { canonicalizeSlug } from '@/lib/utils/slug.utils';
 
 interface WikiPageProps {
   params: Promise<{ slug: string }>;
@@ -17,7 +18,17 @@ interface WikiPageProps {
 
 export default async function WikiPage({ params }: WikiPageProps) {
   const { slug } = await params;
-  const [page, allItems] = await Promise.all([getWikiPage(slug), getWikiList()]);
+  const canonicalSlug = canonicalizeSlug(slug);
+
+  if (!canonicalSlug) {
+    notFound();
+  }
+
+  if (canonicalSlug !== slug) {
+    redirect(`/${canonicalSlug}`);
+  }
+
+  const [page, allItems] = await Promise.all([getWikiPage(canonicalSlug), getWikiList()]);
 
   if (!page) {
     notFound();
@@ -43,16 +54,16 @@ export default async function WikiPage({ params }: WikiPageProps) {
             <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
                 {/* 모바일 목차 토글 */}
                 {page.toc && page.toc.length > 0 && <MobileTocToggle items={page.toc} />}
-                <Link href={`/${slug}/edit`}>
+                <Link href={`/${canonicalSlug}/edit`}>
                   <Button variant="outline" size="sm">
                     <Pencil className="mr-2 h-4 w-4" />
                     수정
                   </Button>
                 </Link>
-                <DeleteWikiDialog slug={slug} title={page.frontmatter.title} />
+                <DeleteWikiDialog slug={canonicalSlug} title={page.frontmatter.title} />
             </div>
             <WikiViewer page={page} />
-            <NextPrevLinks currentSlug={slug} allItems={allItems} />
+            <NextPrevLinks currentSlug={canonicalSlug} allItems={allItems} />
           </div>
         </div>
         {/* 우측 목차 - 레이아웃의 우측 aside 영역에 배치 */}

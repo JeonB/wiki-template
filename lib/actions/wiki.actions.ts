@@ -2,35 +2,54 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { readFile, writeFile, unlink, readdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { readFile, writeFile, unlink } from 'fs/promises';
 import matter from 'gray-matter';
 import { wikiConfig } from '@/lib/config/wiki.config';
-import { getFilePath, filenameToSlug, isValidSlug } from '@/lib/utils/file.utils';
+import { canonicalizeSlug, isValidSlug } from '@/lib/utils/slug.utils';
+import {
+  getNewContentFilePath,
+  getUniqueMarkdownContentFiles,
+  resolveContentFile,
+  resolveContentFiles,
+} from '@/lib/utils/content-file.utils';
 import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
+
+const userFacingActionMessages = new Set([
+  'Invalid slug',
+  'Page already exists',
+  'Page not found',
+  '슬러그, 제목, 내용을 모두 입력해주세요',
+  '제목과 내용을 입력해주세요',
+  '문서가 변경되었습니다. 최신 내용을 다시 불러온 뒤 수정해주세요.',
+]);
+
+function getFormString(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === 'string' ? value : '';
+}
+
+function isKnownActionError(error: unknown): error is Error {
+  return error instanceof Error && userFacingActionMessages.has(error.message);
+}
+
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
 
 /**
  * Wiki 페이지 목록 조회
  */
 export async function getWikiList(): Promise<WikiListItem[]> {
   try {
-    if (!existsSync(wikiConfig.contentDir)) {
-      return [];
-    }
-
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
-
+    const markdownFiles = await getUniqueMarkdownContentFiles();
     const items: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
       try {
-        const filePath = join(wikiConfig.contentDir, file);
-        const content = await readFile(filePath, 'utf-8');
-        const slug = filenameToSlug(file);
+        const content = await readFile(file.filePath, 'utf-8');
+        const slug = file.slug;
         const parsed = await parseMarkdownFile(content, slug);
 
         items.push({
@@ -71,17 +90,16 @@ export async function getWikiList(): Promise<WikiListItem[]> {
 export async function getWikiPage(slug: string): Promise<WikiPage | null> {
   try {
     if (!isValidSlug(slug)) {
-      throw new Error('Invalid slug');
-    }
-
-    const filePath = getFilePath(slug);
-
-    if (!existsSync(filePath)) {
       return null;
     }
 
-    const content = await readFile(filePath, 'utf-8');
-    return await parseMarkdownFile(content, slug);
+    const contentFile = await resolveContentFile(slug);
+    if (!contentFile) {
+      return null;
+    }
+
+    const content = await readFile(contentFile.filePath, 'utf-8');
+    return await parseMarkdownFile(content, contentFile.slug);
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error getting wiki page:', error);
@@ -104,9 +122,8 @@ async function createWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
-
-    if (existsSync(filePath)) {
+    const existingFile = await resolveContentFile(slug);
+    if (existingFile) {
       throw new Error('Page already exists');
     }
 
@@ -123,10 +140,20 @@ async function createWikiPage(
     };
 
     const markdown = serializeToMarkdown(page);
-    await writeFile(filePath, markdown, 'utf-8');
+    try {
+      await writeFile(getNewContentFilePath(slug), markdown, { encoding: 'utf-8', flag: 'wx' });
+    } catch (error) {
+      if (isErrnoException(error) && error.code === 'EEXIST') {
+        throw new Error('Page already exists');
+      }
+      throw error;
+    }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error creating wiki page:', error);
+    }
+    if (isKnownActionError(error)) {
+      throw error;
     }
     throw new Error('Failed to create wiki page');
   }
@@ -141,6 +168,7 @@ async function updateWikiPage(
     title?: string;
     content?: string;
     frontmatter?: Partial<WikiPage['frontmatter']>;
+    expectedUpdatedAt?: string;
   },
 ): Promise<void> {
   try {
@@ -148,14 +176,20 @@ async function updateWikiPage(
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
-
-    if (!existsSync(filePath)) {
+    const contentFile = await resolveContentFile(slug);
+    if (!contentFile) {
       throw new Error('Page not found');
     }
 
-    const existingContent = await readFile(filePath, 'utf-8');
-    const existingPage = await parseMarkdownFile(existingContent, slug);
+    const existingContent = await readFile(contentFile.filePath, 'utf-8');
+    const existingPage = await parseMarkdownFile(existingContent, contentFile.slug);
+
+    if (
+      updates.expectedUpdatedAt &&
+      existingPage.frontmatter.updatedAt !== updates.expectedUpdatedAt
+    ) {
+      throw new Error('문서가 변경되었습니다. 최신 내용을 다시 불러온 뒤 수정해주세요.');
+    }
 
     const updatedPage: WikiPage = {
       ...existingPage,
@@ -169,10 +203,13 @@ async function updateWikiPage(
     };
 
     const markdown = serializeToMarkdown(updatedPage);
-    await writeFile(filePath, markdown, 'utf-8');
+    await writeFile(contentFile.filePath, markdown, 'utf-8');
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error updating wiki page:', error);
+    }
+    if (isKnownActionError(error)) {
+      throw error;
     }
     throw new Error('Failed to update wiki page');
   }
@@ -187,17 +224,21 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Invalid slug');
     }
 
-    const filePath = getFilePath(slug);
-
-    if (!existsSync(filePath)) {
+    const contentFiles = await resolveContentFiles(slug);
+    if (contentFiles.length === 0) {
       throw new Error('Page not found');
     }
 
-    await unlink(filePath);
+    for (const file of contentFiles) {
+      await unlink(file.filePath);
+    }
     revalidatePath('/', 'layout');
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error deleting wiki page:', error);
+    }
+    if (isKnownActionError(error)) {
+      throw error;
     }
     throw new Error('Failed to delete wiki page');
   }
@@ -211,20 +252,14 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
     const q = query.trim();
     if (!q) return [];
 
-    if (!existsSync(wikiConfig.contentDir)) {
-      return [];
-    }
-
-    const files = await readdir(wikiConfig.contentDir);
-    const markdownFiles = files.filter((f) => f.endsWith('.md') || f.endsWith('.markdown'));
+    const markdownFiles = await getUniqueMarkdownContentFiles();
     const results: WikiListItem[] = [];
 
     for (const file of markdownFiles) {
       try {
-        const filePath = join(wikiConfig.contentDir, file);
-        const raw = await readFile(filePath, 'utf-8');
+        const raw = await readFile(file.filePath, 'utf-8');
         const { data, content: body } = matter(raw);
-        const slug = filenameToSlug(file);
+        const slug = file.slug;
 
         const item: WikiListItem = {
           slug,
@@ -261,24 +296,20 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
 }
 
 /**
- * Wiki 페이지 생성 액션 (redirect 포함)
+ * Wiki 페이지 생성 액션
  */
-export async function createWikiPageAction(formData: FormData): Promise<void> {
-  await createWikiPageFromFormData(formData);
-  const slug = (formData.get('slug') as string) ?? '';
-  redirect(`/${slug}`);
+export async function createWikiPageAction(formData: FormData): Promise<string> {
+  return await createWikiPageFromFormData(formData);
 }
 
 /**
  * FormData에서 Wiki 페이지 생성
  */
-async function createWikiPageFromFormData(formData: FormData): Promise<void> {
-  const slug = ((formData.get('slug') as string) ?? '')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-  const title = formData.get('title') as string;
-  const content = formData.get('content') as string;
-  const category = (formData.get('category') as string) || undefined;
+async function createWikiPageFromFormData(formData: FormData): Promise<string> {
+  const slug = canonicalizeSlug(getFormString(formData, 'slug'));
+  const title = getFormString(formData, 'title');
+  const content = getFormString(formData, 'content');
+  const category = getFormString(formData, 'category') || undefined;
 
   if (!slug || !title || !content) {
     throw new Error('슬러그, 제목, 내용을 모두 입력해주세요');
@@ -288,6 +319,7 @@ async function createWikiPageFromFormData(formData: FormData): Promise<void> {
     category,
   });
   revalidatePath('/', 'layout');
+  return slug;
 }
 
 /**
@@ -305,9 +337,10 @@ async function updateWikiPageFromFormData(
   slug: string,
   formData: FormData,
 ): Promise<void> {
-  const title = formData.get('title') as string;
-  const content = formData.get('content') as string;
-  const category = (formData.get('category') as string) || undefined;
+  const title = getFormString(formData, 'title');
+  const content = getFormString(formData, 'content');
+  const category = getFormString(formData, 'category') || undefined;
+  const expectedUpdatedAt = getFormString(formData, 'expectedUpdatedAt') || undefined;
 
   if (!title || !content) {
     throw new Error('제목과 내용을 입력해주세요');
@@ -316,6 +349,7 @@ async function updateWikiPageFromFormData(
   await updateWikiPage(slug, {
     title,
     content,
+    expectedUpdatedAt,
     frontmatter: {
       category,
     },

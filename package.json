@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:wiki-persistence": "node scripts/wiki-persistence-regression.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
