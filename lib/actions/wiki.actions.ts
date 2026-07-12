@@ -296,11 +296,10 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
 }
 
 /**
- * Wiki 페이지 생성 액션 (redirect 포함)
+ * Wiki 페이지 생성 액션
  */
-export async function createWikiPageAction(formData: FormData): Promise<void> {
-  const slug = await createWikiPageFromFormData(formData);
-  redirect(`/${slug}`);
+export async function createWikiPageAction(formData: FormData): Promise<string> {
+  return await createWikiPageFromFormData(formData);
 }
 
 /**
