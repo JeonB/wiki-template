@@ -113,12 +113,12 @@ async function main() {
       'Expected /guide to render guide.markdown content',
     );
 
-    const casedSlug = await fetch(`${baseUrl}/README`, { redirect: 'manual' });
+    const casedSlug = await fetch(`${baseUrl}/readme---`, { redirect: 'manual' });
     assert(
       casedSlug.status === 307 || casedSlug.status === 308,
-      `Expected /README to redirect, got ${casedSlug.status}`,
+      `Expected /readme--- to redirect, got ${casedSlug.status}`,
     );
-    assert(casedSlug.headers.get('location') === '/readme', 'Expected /README to redirect to /readme');
+    assert(casedSlug.headers.get('location') === '/readme', 'Expected /readme--- to redirect to /readme');
 
     const home = await fetchText(baseUrl);
     assert(home.response.status === 200, `Expected / 200, got ${home.response.status}`);
