@@ -10,6 +10,10 @@ function markdown(title, body) {
   return `---\ntitle: ${title}\ncategory: Regression\ncreatedAt: "2026-01-01T00:00:00.000Z"\nupdatedAt: "2026-01-01T00:00:00.000Z"\n---\n\n# ${title}\n\n${body}\n`;
 }
 
+function markdownWithoutDates(title, body) {
+  return `---\ntitle: ${title}\ncategory: Regression\n---\n\n# ${title}\n\n${body}\n`;
+}
+
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -95,6 +99,11 @@ async function main() {
       writeFile(join(contentDir, 'guide.markdown'), markdown('Markdown Extension', 'Markdown extension must resolve.')),
       writeFile(join(contentDir, 'My Page.md'), markdown('Duplicate Mixed', 'This duplicate should be hidden.')),
       writeFile(join(contentDir, 'my-page.md'), markdown('Duplicate Lower', 'Canonical lowercase file should win.')),
+      writeFile(join(contentDir, 'new.md'), markdown('Reserved Route', 'Reserved route slugs must not be listed.')),
+      writeFile(
+        join(contentDir, 'legacy-no-dates.md'),
+        markdownWithoutDates('Legacy No Dates', 'Missing updatedAt should keep edits possible.'),
+      ),
     ]);
 
     await waitForServer(baseUrl);
@@ -127,6 +136,23 @@ async function main() {
     assert(home.response.status === 200, `Expected / 200, got ${home.response.status}`);
     assert(home.text.includes('Duplicate Lower'), 'Expected canonical duplicate file to be listed');
     assert(!home.text.includes('Duplicate Mixed'), 'Expected normalized duplicate slug to be de-duped');
+    assert(!home.text.includes('Reserved Route'), 'Expected reserved /new slug file to be hidden from wiki navigation');
+
+    const newRoute = await fetchText(`${baseUrl}/new`);
+    assert(newRoute.response.status === 200, `Expected /new route 200, got ${newRoute.response.status}`);
+    assert(newRoute.text.includes('새 문서 작성'), 'Expected /new to render the create page');
+    assert(!newRoute.text.includes('Reserved Route'), 'Expected /new not to render content/new.md');
+
+    const legacyEdit = await fetchText(`${baseUrl}/legacy-no-dates/edit`);
+    assert(
+      legacyEdit.response.status === 200,
+      `Expected /legacy-no-dates/edit 200, got ${legacyEdit.response.status}`,
+    );
+    assert(legacyEdit.text.includes('Legacy No Dates'), 'Expected legacy no-date page edit form to render');
+    assert(
+      legacyEdit.text.includes('name="expectedUpdatedAt" value=""'),
+      'Expected missing updatedAt to stay empty instead of using a generated timestamp',
+    );
 
     process.stdout.write('wiki persistence regression checks passed\n');
   } finally {
