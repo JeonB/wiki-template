@@ -23,6 +23,7 @@ const userFacingActionMessages = new Set([
   '슬러그, 제목, 내용을 모두 입력해주세요',
   '제목과 내용을 입력해주세요',
   '문서가 변경되었습니다. 최신 내용을 다시 불러온 뒤 수정해주세요.',
+  '동일한 슬러그의 문서 파일이 여러 개 있어 삭제를 중단했습니다. 관리자에게 파일 정리를 요청해주세요.',
 ]);
 
 function getFormString(formData: FormData, name: string): string {
@@ -229,9 +230,13 @@ export async function deleteWikiPage(slug: string): Promise<void> {
       throw new Error('Page not found');
     }
 
-    for (const file of contentFiles) {
-      await unlink(file.filePath);
+    if (contentFiles.length > 1) {
+      throw new Error(
+        '동일한 슬러그의 문서 파일이 여러 개 있어 삭제를 중단했습니다. 관리자에게 파일 정리를 요청해주세요.',
+      );
     }
+
+    await unlink(contentFiles[0].filePath);
     revalidatePath('/', 'layout');
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
