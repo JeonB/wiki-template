@@ -5,6 +5,8 @@ function stripExtension(filename: string): string {
   return extensionIndex > 0 ? basename.slice(0, extensionIndex) : basename;
 }
 
+const reservedWikiSlugs = new Set(['new']);
+
 /**
  * 파일명을 슬러그로 변환
  */
@@ -20,7 +22,7 @@ export function filenameToSlug(filename: string): string {
  * 슬러그가 유효한지 확인
  */
 export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9-]+$/.test(slug) && slug.length > 0;
+  return /^[a-z0-9-]+$/.test(slug) && slug.length > 0 && !reservedWikiSlugs.has(slug);
 }
 
 /**

@@ -8,19 +8,28 @@ import rehypeStringify from 'rehype-stringify';
 import { extractHeadings, addIdsToHeadings } from './toc.utils';
 import type { WikiFrontmatter, WikiPage } from '@/lib/types/wiki.types';
 
+function getFrontmatterString(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) return value.toISOString();
+  return undefined;
+}
+
 /**
  * 마크다운 파일 내용을 파싱하여 WikiPage 객체로 변환
  */
 export async function parseMarkdownFile(content: string, slug: string): Promise<WikiPage> {
   const { data, content: body } = matter(content);
+  const createdAt = getFrontmatterString(data.createdAt) ?? getFrontmatterString(data.date);
+  const updatedAt =
+    getFrontmatterString(data.updatedAt) ?? getFrontmatterString(data.date) ?? createdAt;
 
   const frontmatter: WikiFrontmatter = {
     title: data.title || 'Untitled',
     description: data.description || '',
     category: data.category || '',
     tags: Array.isArray(data.tags) ? data.tags : [],
-    createdAt: data.createdAt || data.date || new Date().toISOString(),
-    updatedAt: data.updatedAt || data.date || new Date().toISOString(),
+    createdAt,
+    updatedAt,
     author: data.author || '',
   };
 
