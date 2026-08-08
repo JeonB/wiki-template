@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:wiki-serialize": "node --experimental-strip-types --import ./scripts/alias-loader.mjs scripts/wiki-serialize-regression.mjs",
+    "test:wiki-serialize": "node --experimental-strip-types --import ./scripts/register-alias-loader.mjs scripts/wiki-serialize-regression.mjs",
     "test:wiki-persistence": "pnpm test:wiki-serialize && node scripts/wiki-persistence-regression.mjs"
   },
   "dependencies": {
