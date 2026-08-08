@@ -52,6 +52,10 @@ export async function parseMarkdownFile(content: string, slug: string): Promise<
 
 /**
  * WikiPage 객체를 마크다운 파일 형식으로 변환
+ *
+ * gray-matter's stringify(content, data) re-parses `content` when it starts with
+ * `---`, which silently corrupts bodies that document frontmatter examples or begin
+ * with a thematic break. Build the header from an empty body, then append content.
  */
 export function serializeToMarkdown(page: WikiPage): string {
   const frontmatter = {
@@ -64,5 +68,7 @@ export function serializeToMarkdown(page: WikiPage): string {
     ...(page.frontmatter.author && { author: page.frontmatter.author }),
   };
 
-  return matter.stringify(page.content, frontmatter);
+  const header = matter.stringify('', frontmatter);
+  const body = page.content.endsWith('\n') ? page.content : `${page.content}\n`;
+  return `${header}${body}`;
 }
