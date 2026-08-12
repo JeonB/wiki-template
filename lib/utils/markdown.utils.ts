@@ -9,20 +9,54 @@ import { extractHeadings, addIdsToHeadings } from './toc.utils';
 import type { WikiFrontmatter, WikiPage } from '@/lib/types/wiki.types';
 
 /**
+ * gray-matter/YAML can yield non-strings (maps, arrays, numbers). Rendering those
+ * as React children crashes the wiki list/page, so coerce display fields to strings.
+ */
+function asPlainString(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => asPlainString(entry)).filter((entry) => entry.length > 0);
+}
+
+function asFrontmatterDate(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  return undefined;
+}
+
+/**
+ * Normalize gray-matter data into WikiFrontmatter with render-safe string fields.
+ */
+export function normalizeWikiFrontmatter(data: Record<string, unknown>): WikiFrontmatter {
+  const createdAt = asFrontmatterDate(data.createdAt) ?? asFrontmatterDate(data.date);
+  const updatedAt =
+    asFrontmatterDate(data.updatedAt) ?? asFrontmatterDate(data.date) ?? createdAt;
+
+  return {
+    title: asPlainString(data.title, 'Untitled') || 'Untitled',
+    description: asPlainString(data.description),
+    category: asPlainString(data.category),
+    tags: asStringArray(data.tags),
+    // Keep missing dates undefined so edit revisions stay stable for legacy files.
+    // Callers that still need a timestamp can fall back themselves.
+    createdAt,
+    updatedAt,
+    author: asPlainString(data.author),
+  };
+}
+
+/**
  * 마크다운 파일 내용을 파싱하여 WikiPage 객체로 변환
  */
 export async function parseMarkdownFile(content: string, slug: string): Promise<WikiPage> {
   const { data, content: body } = matter(content);
 
-  const frontmatter: WikiFrontmatter = {
-    title: data.title || 'Untitled',
-    description: data.description || '',
-    category: data.category || '',
-    tags: Array.isArray(data.tags) ? data.tags : [],
-    createdAt: data.createdAt || data.date || new Date().toISOString(),
-    updatedAt: data.updatedAt || data.date || new Date().toISOString(),
-    author: data.author || '',
-  };
+  const frontmatter = normalizeWikiFrontmatter(data as Record<string, unknown>);
 
   // 마크다운을 HTML로 변환 (remark-rehype + rehype-stringify 사용)
   // rehype-sanitize로 XSS 방지: raw HTML, script, 이벤트 핸들러 등 제거

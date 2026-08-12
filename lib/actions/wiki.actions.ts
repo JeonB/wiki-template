@@ -12,7 +12,11 @@ import {
   resolveContentFile,
   resolveContentFiles,
 } from '@/lib/utils/content-file.utils';
-import { parseMarkdownFile, serializeToMarkdown } from '@/lib/utils/markdown.utils';
+import {
+  normalizeWikiFrontmatter,
+  parseMarkdownFile,
+  serializeToMarkdown,
+} from '@/lib/utils/markdown.utils';
 import { matchesWikiItem, matchesSearch } from '@/lib/utils/search.utils';
 import type { WikiPage, WikiListItem } from '@/lib/types/wiki.types';
 
@@ -260,14 +264,15 @@ export async function searchWikiPages(query: string): Promise<WikiListItem[]> {
         const raw = await readFile(file.filePath, 'utf-8');
         const { data, content: body } = matter(raw);
         const slug = file.slug;
+        const frontmatter = normalizeWikiFrontmatter(data as Record<string, unknown>);
 
         const item: WikiListItem = {
           slug,
-          title: data.title || 'Untitled',
-          description: data.description,
-          category: data.category,
-          tags: Array.isArray(data.tags) ? data.tags : [],
-          updatedAt: data.updatedAt || data.date || new Date().toISOString(),
+          title: frontmatter.title,
+          description: frontmatter.description,
+          category: frontmatter.category,
+          tags: frontmatter.tags,
+          updatedAt: frontmatter.updatedAt,
         };
 
         const metaMatch = matchesWikiItem(item, q);

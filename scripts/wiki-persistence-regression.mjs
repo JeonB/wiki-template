@@ -10,6 +10,14 @@ function markdown(title, body) {
   return `---\ntitle: ${title}\ncategory: Regression\ncreatedAt: "2026-01-01T00:00:00.000Z"\nupdatedAt: "2026-01-01T00:00:00.000Z"\n---\n\n# ${title}\n\n${body}\n`;
 }
 
+function markdownNestedCategory(title, body) {
+  return `---\ntitle: ${title}\ncategory:\n  name: nested\n---\n\n# ${title}\n\n${body}\n`;
+}
+
+function markdownNestedTitle(body) {
+  return `---\ntitle:\n  en: Nested Title\n  ko: 중첩 제목\ncategory: Regression\n---\n\n# Nested\n\n${body}\n`;
+}
+
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -95,6 +103,14 @@ async function main() {
       writeFile(join(contentDir, 'guide.markdown'), markdown('Markdown Extension', 'Markdown extension must resolve.')),
       writeFile(join(contentDir, 'My Page.md'), markdown('Duplicate Mixed', 'This duplicate should be hidden.')),
       writeFile(join(contentDir, 'my-page.md'), markdown('Duplicate Lower', 'Canonical lowercase file should win.')),
+      writeFile(
+        join(contentDir, 'nested-category.md'),
+        markdownNestedCategory('Nested Category', 'Nested YAML category must not crash the home page.'),
+      ),
+      writeFile(
+        join(contentDir, 'nested-title.md'),
+        markdownNestedTitle('Nested YAML title must not crash page rendering.'),
+      ),
     ]);
 
     await waitForServer(baseUrl);
@@ -127,6 +143,44 @@ async function main() {
     assert(home.response.status === 200, `Expected / 200, got ${home.response.status}`);
     assert(home.text.includes('Duplicate Lower'), 'Expected canonical duplicate file to be listed');
     assert(!home.text.includes('Duplicate Mixed'), 'Expected normalized duplicate slug to be de-duped');
+    assert(
+      !home.text.includes('localeCompare is not a function'),
+      'Expected nested YAML category not to crash home category sorting',
+    );
+    assert(
+      !home.text.includes('Objects are not valid as a React child'),
+      'Expected nested YAML frontmatter not to crash home rendering',
+    );
+    assert(home.text.includes('Nested Category'), 'Expected nested-category page to remain listable');
+    assert(home.text.includes('Untitled'), 'Expected nested object title to fall back to Untitled');
+
+    const nestedCategoryPage = await fetchText(`${baseUrl}/nested-category`);
+    assert(
+      nestedCategoryPage.response.status === 200,
+      `Expected /nested-category 200, got ${nestedCategoryPage.response.status}`,
+    );
+    assert(
+      nestedCategoryPage.text.includes('Nested Category'),
+      'Expected /nested-category to render with string title',
+    );
+    assert(
+      !nestedCategoryPage.text.includes('Objects are not valid as a React child'),
+      'Expected /nested-category not to crash on nested category',
+    );
+
+    const nestedTitlePage = await fetchText(`${baseUrl}/nested-title`);
+    assert(
+      nestedTitlePage.response.status === 200,
+      `Expected /nested-title 200, got ${nestedTitlePage.response.status}`,
+    );
+    assert(
+      nestedTitlePage.text.includes('Untitled'),
+      'Expected /nested-title to fall back to Untitled for object titles',
+    );
+    assert(
+      !nestedTitlePage.text.includes('Objects are not valid as a React child'),
+      'Expected /nested-title not to crash on nested title',
+    );
 
     process.stdout.write('wiki persistence regression checks passed\n');
   } finally {
